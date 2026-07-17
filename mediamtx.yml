@@ -1,0 +1,20 @@
+# Dev config for MediaMTX. Disables auth entirely — local development only.
+api: yes
+apiAddress: :9997
+
+authMethod: internal
+authInternalUsers:
+  - user: any
+    pass:
+    ips: []
+    permissions:
+      - action: publish
+      - action: read
+      - action: playback
+      - action: api
+      - action: metrics
+      - action: pprof
+
+# Allow publishing to any path name without pre-registering it (dev only).
+paths:
+  all_others:

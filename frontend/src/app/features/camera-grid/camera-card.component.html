@@ -1,0 +1,29 @@
+<div class="camera-card" [class.camera-card--live]="camera().isLive">
+  <div class="camera-card__header">
+    <span class="camera-card__name">{{ camera().name }}</span>
+    <span
+      class="badge"
+      [class.badge--online]="camera().status === 'online'"
+      [class.badge--offline]="camera().status === 'offline'"
+    >
+      {{ camera().status === 'online' ? 'Online' : 'Offline' }}
+    </span>
+  </div>
+
+  <div class="camera-card__preview">
+    <span class="camera-card__preview-placeholder">Pré-visualização indisponível</span>
+  </div>
+
+  @if (camera().isLive) {
+    <div class="camera-card__live-badge">NO AR</div>
+  }
+
+  <button
+    type="button"
+    class="camera-card__button"
+    [disabled]="camera().status === 'offline' || camera().isLive"
+    (click)="onGoLiveClick()"
+  >
+    Colocar no ar
+  </button>
+</div>

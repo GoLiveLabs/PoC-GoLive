@@ -1,0 +1,40 @@
+<div class="control-bar">
+  <div class="control-bar__indicators">
+    <span
+      class="indicator"
+      [class.indicator--ok]="connectionState() === 'open'"
+      [class.indicator--fail]="connectionState() !== 'open'"
+    >
+      Painel:
+      {{
+        connectionState() === 'open'
+          ? 'conectado'
+          : connectionState() === 'connecting'
+            ? 'conectando...'
+            : 'desconectado'
+      }}
+    </span>
+
+    <span
+      class="indicator"
+      [class.indicator--ok]="systemStatus()?.obsConnected"
+      [class.indicator--fail]="!systemStatus()?.obsConnected"
+    >
+      OBS: {{ systemStatus()?.obsConnected ? 'conectado' : 'desconectado' }}
+    </span>
+
+    <span
+      class="indicator"
+      [class.indicator--ok]="systemStatus()?.mediaServerConnected"
+      [class.indicator--fail]="!systemStatus()?.mediaServerConnected"
+    >
+      MediaMTX: {{ systemStatus()?.mediaServerConnected ? 'conectado' : 'desconectado' }}
+    </span>
+
+    <span class="indicator">
+      No ar: {{ systemStatus()?.liveCameraId || 'nenhuma câmera' }}
+    </span>
+  </div>
+
+  <button type="button" class="control-bar__sync" (click)="onSyncClick()">Sincronizar agora</button>
+</div>

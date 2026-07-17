@@ -1,0 +1,9 @@
+@if (cameras().length === 0) {
+  <p class="camera-grid__empty">Nenhuma câmera detectada ainda.</p>
+} @else {
+  <div class="camera-grid">
+    @for (camera of cameras(); track camera.id) {
+      <app-camera-card [camera]="camera" (goLive)="goLive.emit($event)" />
+    }
+  </div>
+}

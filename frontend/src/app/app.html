@@ -1,0 +1,24 @@
+<div class="app-shell">
+  <app-control-bar
+    [systemStatus]="ws.systemStatus()"
+    [connectionState]="ws.connectionState()"
+    (sync)="onSync()"
+  />
+
+  @if (ws.lastError()) {
+    <div class="toast toast--error" role="alert">
+      <span>{{ ws.lastError() }}</span>
+      <button type="button" (click)="dismissError()">×</button>
+    </div>
+  }
+
+  @if (ws.connectionState() !== 'open') {
+    <div class="toast toast--warning" role="status">
+      <span>Sem conexão com o backend. Tentando reconectar...</span>
+    </div>
+  }
+
+  <main class="app-shell__content">
+    <app-camera-grid [cameras]="ws.cameras()" (goLive)="onGoLive($event)" />
+  </main>
+</div>

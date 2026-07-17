@@ -1,0 +1,36 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell__content {
+  padding: 1.5rem;
+  flex: 1;
+}
+
+.toast {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.9rem;
+}
+
+.toast--error {
+  background: #4a1414;
+  color: #ffb3b3;
+}
+
+.toast--warning {
+  background: #4a3b14;
+  color: #ffe0a3;
+}
+
+.toast button {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.1rem;
+  cursor: pointer;
+}

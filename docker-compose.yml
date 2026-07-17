@@ -1,0 +1,10 @@
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    ports:
+      - "1935:1935"     # RTMP ingest
+      - "8554:8554"     # RTSP
+      - "8890:8890/udp" # SRT
+      - "9997:9997"     # API HTTP
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
