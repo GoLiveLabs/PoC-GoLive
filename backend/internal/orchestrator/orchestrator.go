@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,11 +43,12 @@ type MediaServerClient interface {
 
 // Orchestrator owns the in-memory camera state and the sync loop.
 type Orchestrator struct {
-	mediaClient  MediaServerClient
-	obsCtl       obs.Controller
-	hub          *events.Hub
-	programScene string
-	syncInterval time.Duration
+	mediaClient        MediaServerClient
+	obsCtl             obs.Controller
+	hub                *events.Hub
+	programScene       string
+	syncInterval       time.Duration
+	mediaSourceBaseURL string
 
 	mu             sync.RWMutex
 	cameras        map[string]*Camera
@@ -56,15 +58,16 @@ type Orchestrator struct {
 }
 
 // New creates an Orchestrator. Call Run to start the background sync loop.
-func New(mediaClient MediaServerClient, obsCtl obs.Controller, hub *events.Hub, programScene string, syncInterval time.Duration) *Orchestrator {
+func New(mediaClient MediaServerClient, obsCtl obs.Controller, hub *events.Hub, programScene string, syncInterval time.Duration, mediaSourceBaseURL string) *Orchestrator {
 	return &Orchestrator{
-		mediaClient:  mediaClient,
-		obsCtl:       obsCtl,
-		hub:          hub,
-		programScene: programScene,
-		syncInterval: syncInterval,
-		cameras:      make(map[string]*Camera),
-		offlineSince: make(map[string]time.Time),
+		mediaClient:        mediaClient,
+		obsCtl:             obsCtl,
+		hub:                hub,
+		programScene:       programScene,
+		syncInterval:       syncInterval,
+		mediaSourceBaseURL: mediaSourceBaseURL,
+		cameras:            make(map[string]*Camera),
+		offlineSince:       make(map[string]time.Time),
 	}
 }
 
@@ -171,7 +174,7 @@ func (o *Orchestrator) SyncOnce(ctx context.Context) []Camera {
 			cam = &Camera{
 				ID:         s.Name,
 				Name:       s.Name,
-				SourceURL:  fmt.Sprintf("rtmp://mediamtx:1935/%s", s.Name),
+				SourceURL:  fmt.Sprintf("%s/%s", strings.TrimRight(o.mediaSourceBaseURL, "/"), s.Name),
 				Status:     StatusOnline,
 				LastSeenAt: now,
 			}

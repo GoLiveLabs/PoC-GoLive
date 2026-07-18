@@ -38,10 +38,15 @@ func (f *fakeMediaClient) ListActiveStreams(ctx context.Context) ([]mediaserver.
 }
 
 func newTestOrchestrator() (*Orchestrator, *fakeMediaClient, *obsmock.Mock) {
+	// TODO: vamos precisar remover essa url fixa
+	return newTestOrchestratorWithMediaSourceURL("rtmp://localhost:1935")
+}
+
+func newTestOrchestratorWithMediaSourceURL(baseURL string) (*Orchestrator, *fakeMediaClient, *obsmock.Mock) {
 	media := &fakeMediaClient{}
 	obsCtl := obsmock.New()
 	hub := events.NewHub()
-	o := New(media, obsCtl, hub, "Program", time.Second)
+	o := New(media, obsCtl, hub, "Program", time.Second, baseURL)
 	return o, media, obsCtl
 }
 
@@ -62,6 +67,20 @@ func TestSyncOnce_CameraAppears(t *testing.T) {
 	}
 	if _, ok := obsCtl.Inputs["cam_camera1"]; !ok {
 		t.Fatalf("expected obs input cam_camera1 to be created")
+	}
+}
+
+func TestSyncOnce_UsesConfiguredMediaSourceURL(t *testing.T) {
+	o, media, _ := newTestOrchestratorWithMediaSourceURL("rtmp://example.internal:1935")
+	media.set([]mediaserver.StreamInfo{{Name: "camera1", Ready: true}}, nil)
+
+	cams := o.SyncOnce(context.Background())
+
+	if len(cams) != 1 {
+		t.Fatalf("expected 1 camera, got %d", len(cams))
+	}
+	if cams[0].SourceURL != "rtmp://example.internal:1935/camera1" {
+		t.Fatalf("expected source URL to use configured media server base URL, got %q", cams[0].SourceURL)
 	}
 }
 

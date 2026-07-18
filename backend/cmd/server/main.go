@@ -31,7 +31,7 @@ func main() {
 	msClient := mediaserver.NewClient(cfg.MediaMTXAPIURL)
 	obsCtl := obs.New(cfg.OBSAddr, cfg.OBSPassword)
 	hub := events.NewHub()
-	orch := orchestrator.New(msClient, obsCtl, hub, cfg.ProgramScene, cfg.SyncInterval)
+	orch := orchestrator.New(msClient, obsCtl, hub, cfg.ProgramScene, cfg.SyncInterval, cfg.MediaSourceBaseURL)
 
 	orchCtx, orchCancel := context.WithCancel(context.Background())
 	go orch.Run(orchCtx)
