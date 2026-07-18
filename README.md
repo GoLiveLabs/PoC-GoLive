@@ -58,6 +58,7 @@ Câmeras → MediaMTX → [Backend Go] → OBS Studio → Plataformas (Twitch/Yo
 | `OBS_ADDR` | `localhost:4455` | endereço do obs-websocket |
 | `OBS_PASSWORD` | `` | senha do obs-websocket |
 | `MEDIAMTX_API_URL` | `http://localhost:9997` | URL da API do MediaMTX |
+| `MEDIA_SOURCE_BASE_URL` | `rtmp://localhost:1935` | URL base usada para montar o `sourceUrl` de cada câmera |
 | `API_TOKEN` | `dev-token` | token exigido no header `X-Api-Token` |
 | `SYNC_INTERVAL` | `3s` | intervalo do loop de sincronização |
 | `PROGRAM_SCENE` | `Program` | nome da cena de programa no OBS |
