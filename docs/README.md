@@ -8,6 +8,7 @@ Bem-vindo à documentação técnica do **Live Orchestrator**. Este guia fornece
 
 ### Visão Geral
 - **[ESTRUTURA_GERAL.md](ESTRUTURA_GERAL.md)** — Apanhado geral do projeto, arquitetura em alto nível, estrutura de diretórios e fluxos principais
+- **[COMO_RODAR.md](COMO_RODAR.md)** — guia rápido para subir frontend e backend em desenvolvimento local
 
 ### Backend (Go)
 - **[backend/ARQUITETURA.md](backend/ARQUITETURA.md)** — Arquitetura do backend, pacotes, modelos de concorrência, tratamento de erros
@@ -25,8 +26,9 @@ Bem-vindo à documentação técnica do **Live Orchestrator**. Este guia fornece
 
 **Primeiro acesso?** Comece por:
 1. [ESTRUTURA_GERAL.md](ESTRUTURA_GERAL.md) — Entender visão geral
-2. [backend/ARQUITETURA.md](backend/ARQUITETURA.md) — Aprender core da lógica
-3. [frontend/ARQUITETURA.md](frontend/ARQUITETURA.md) — Entender UI
+2. [COMO_RODAR.md](COMO_RODAR.md) — Subir os ambientes localmente
+3. [backend/ARQUITETURA.md](backend/ARQUITETURA.md) — Aprender core da lógica
+4. [frontend/ARQUITETURA.md](frontend/ARQUITETURA.md) — Entender UI
 
 **Debugar um fluxo específico?**
 1. [backend/COMUNICACAO.md](backend/COMUNICACAO.md) — Entender o que backend faz
