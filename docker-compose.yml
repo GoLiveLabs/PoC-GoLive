@@ -28,7 +28,7 @@ services:
       - "host.docker.internal:host-gateway"
 
   frontend:
-    image: ghcr.io/golivelabs/golive-frontend:2.0
+    image: ghcr.io/golivelabs/golive-frontend:latest
     ports:
       - "4200:4200"
     depends_on:
