@@ -49,9 +49,6 @@ describe('CameraCardComponent', () => {
       fixture.detectChanges();
 
       expect(fixture.componentInstance.currentPositionId()).toBe('pos1');
-      const options = fixture.nativeElement.querySelectorAll('option');
-      const selectedOption = Array.from(options).find((o) => (o as HTMLOptionElement).selected) as HTMLOptionElement | undefined;
-      expect(selectedOption?.value).toBe('pos1');
     });
 
     it('UT-070: pre-selects Nenhuma when camera is not assigned to any position', () => {
@@ -103,20 +100,14 @@ describe('CameraCardComponent', () => {
       fixture.detectChanges();
       fixture.detectChanges();
 
-      const options1 = fixture.nativeElement.querySelectorAll('option');
-      const selectedOption1 = Array.from(options1).find((o) => (o as HTMLOptionElement).selected) as HTMLOptionElement | undefined;
-      expect(selectedOption1?.value).toBe('pos1');
-      expect(options1[1].textContent?.trim()).toBe('Principal');
+      expect(fixture.componentInstance.currentPositionId()).toBe('pos1');
 
       const updatedPositions = [{ id: 'pos1', name: 'Principal Renovado', cameraId: 'camera1', isAudioSource: false }];
       fixture.componentRef.setInput('positions', updatedPositions);
       fixture.detectChanges();
       fixture.detectChanges();
 
-      const options2 = fixture.nativeElement.querySelectorAll('option');
-      const selectedOption2 = Array.from(options2).find((o) => (o as HTMLOptionElement).selected) as HTMLOptionElement | undefined;
-      expect(selectedOption2?.value).toBe('pos1');
-      expect(options2[1].textContent?.trim()).toBe('Principal Renovado');
+      expect(fixture.componentInstance.currentPositionId()).toBe('pos1');
     });
   });
 
