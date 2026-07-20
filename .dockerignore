@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/.angular
+**/.git
+**/.DS_Store
+**/tmp
+**/tmp/**
+backend/.env
+frontend/.env
