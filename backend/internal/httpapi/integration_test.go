@@ -58,7 +58,7 @@ func newIntegrationServer(t *testing.T) (http.Handler, *orchestrator.Orchestrato
 	hub := events.NewHub()
 	orch := orchestrator.New(media, obsCtl, hub, "Program", time.Second, "rtmp://localhost:1935", store)
 
-	srv := NewServer(orch, hub, testToken)
+	srv := NewServer(orch, hub, testToken, nil, nil, nil, nil)
 	return srv.Handler(), orch, media, obsCtl, storePath
 }
 
@@ -330,7 +330,7 @@ func TestIntegration_CorruptPositionsFile_StartsEmpty(t *testing.T) {
 	obsCtl := obsmock.New()
 	hub := events.NewHub()
 	orch := orchestrator.New(media, obsCtl, hub, "Program", time.Second, "rtmp://localhost:1935", store)
-	srv := NewServer(orch, hub, testToken).Handler()
+	srv := NewServer(orch, hub, testToken, nil, nil, nil, nil).Handler()
 
 	rec := doRequest(srv, http.MethodGet, "/api/v1/positions", "")
 	if rec.Code != http.StatusOK {
