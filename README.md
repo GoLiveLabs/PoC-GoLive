@@ -6,6 +6,7 @@ decisões técnicas tomadas durante a implementação.
 
 ## Documentação
 
+- **[docs/COMO_RODAR.md](docs/COMO_RODAR.md)** — guia rápido para subir frontend e backend em desenvolvimento local
 - **[COMO_USAR.md](COMO_USAR.md)** — guia passo a passo de utilização (setup, painel, câmeras fake/reais, troubleshooting)
 - **[docs/BACKEND.md](docs/BACKEND.md)** — documentação técnica do backend Go (pacotes, contratos, sync loop, testes)
 - **[docs/FRONTEND.md](docs/FRONTEND.md)** — documentação técnica do frontend Angular (services, signals, componentes)

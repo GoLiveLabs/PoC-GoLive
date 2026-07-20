@@ -1,241 +1,286 @@
-# Documentação Completa da Aplicação
+# Documentação — Live Orchestrator
 
-Bem-vindo! Aqui está toda a documentação para entender e usar a aplicação **Live Orchestrator**.
-
-## 🎯 Escolha seu caminho
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   DOCUMENTAÇÃO                              │
-│                                                             │
-│  ⏱️ NÃO TENHO TEMPO                                         │
-│  ↓                                                          │
-│  Lê QUICK_START.md (10 min) → Começa a usar              │
-│                                                             │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  📖 QUERO ENTENDER TUDO                                     │
-│  ↓                                                          │
-│  1. INDEX.md (mapa completo)                              │
-│  2. VISAO_GERAL.md (o quê e por quê)                     │
-│  3. GUIA_USO.md (como instalar e usar)                   │
-│  4. DOCUMENTACAO_BACKEND.md (como funciona Go)           │
-│  5. DOCUMENTACAO_FRONTEND.md (como funciona Angular)     │
-│                                                             │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  📱 QUERO USAR CÂMERAS REAIS (Moblin)                      │
-│  ↓                                                          │
-│  1. GUIA_USO.md (setup)                                   │
-│  2. GUIA_OBS_MOBLIN.md (câmera do celular)               │
-│                                                             │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  💻 QUERO MODIFICAR O CÓDIGO                               │
-│  ↓                                                          │
-│  1. DOCUMENTACAO_BACKEND.md                               │
-│  2. DOCUMENTACAO_FRONTEND.md                              │
-│  3. DECISIONS.md (../DECISIONS.md)                        │
-│  4. Explore os arquivos em backend/ e frontend/           │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## 📚 Arquivos de Documentação
-
-| Arquivo | Tempo | Descrição |
-|---------|-------|-----------|
-| **QUICK_START.md** | ⏱️ 10 min | Começa em 10 minutos com 5 terminais |
-| **INDEX.md** | ⏱️ 5 min | Índice completo e mapa mental |
-| **VISAO_GERAL.md** | ⏱️ 5-10 min | O que é, como funciona, por quê |
-| **GUIA_USO.md** | ⏱️ 20-30 min | Passo a passo: instalação e uso |
-| **GUIA_OBS_MOBLIN.md** | ⏱️ 15-20 min | Transmitindo com câmera do celular |
-| **DOCUMENTACAO_BACKEND.md** | ⏱️ 25-30 min | Como funciona a parte Go |
-| **DOCUMENTACAO_FRONTEND.md** | ⏱️ 25-30 min | Como funciona a parte Angular |
-
-## 🚀 Começar Agora
-
-### Opção 1: Rápido (10 minutos)
-```bash
-# Segue exatamente isto:
-# docs/QUICK_START.md
-```
-
-### Opção 2: Completo (1 hora)
-```bash
-# Segue nesta ordem:
-# 1. docs/INDEX.md
-# 2. docs/GUIA_USO.md
-# 3. docs/DOCUMENTACAO_BACKEND.md
-# 4. docs/DOCUMENTACAO_FRONTEND.md
-```
-
-### Opção 3: Com Câmeras Reais (45 minutos)
-```bash
-# Segue nesta ordem:
-# 1. docs/QUICK_START.md
-# 2. docs/GUIA_OBS_MOBLIN.md
-```
-
-## 🎓 O que você vai aprender
-
-Após ler a documentação, você vai saber:
-
-- ✅ O que a aplicação faz e por que existe
-- ✅ Como instalar e usar tudo
-- ✅ Como funciona o backend (Go)
-- ✅ Como funciona o frontend (Angular)
-- ✅ Como integrar com Moblin
-- ✅ Como fazer troubleshooting
-- ✅ Como modificar o código
-- ✅ Todos os comandos disponíveis
-
-## 📋 Conteúdo da Documentação
-
-### **QUICK_START.md**
-- Setup em 5 terminais
-- 10 minutos para começar
-- Checklist de problemas
-
-### **INDEX.md**
-- Índice completo
-- Mapa mental
-- Caminhos de aprendizado
-- Troubleshooting rápido
-
-### **VISAO_GERAL.md**
-- O que a aplicação faz
-- Problema que resolve
-- Como funciona (alto nível)
-- Tecnologias usadas
-- Analogias úteis
-
-### **GUIA_USO.md**
-- Pré-requisitos
-- Preparação inicial
-- Passo a passo completo
-- Operação diária
-- Dicas úteis
-- Variáveis de ambiente
-
-### **GUIA_OBS_MOBLIN.md**
-- O que é Moblin
-- O que é RTMP
-- Setup passo a passo
-- Configuração no celular
-- Integração com OBS
-- Cenários de uso
-- Troubleshooting
-
-### **DOCUMENTACAO_BACKEND.md**
-- Arquitetura Go
-- Cada módulo explicado
-- Fluxo de sincronização
-- Dados que trafegam
-- Endpoints da API
-- Reconexão automática
-- Variáveis de ambiente
-
-### **DOCUMENTACAO_FRONTEND.md**
-- Arquitetura Angular
-- Cada serviço explicado
-- Fluxo de dados
-- Signals e reatividade
-- Layout e componentes
-- Tratamento de erros
-
-## 🔍 Como Ler
-
-### Se é Iniciante
-1. Começa com **QUICK_START.md**
-2. Depois **VISAO_GERAL.md**
-3. Depois **GUIA_USO.md**
-4. Se quiser mais: **DOCUMENTACAO_BACKEND.md** e **DOCUMENTACAO_FRONTEND.md**
-
-### Se é Desenvolvedor
-1. Começa com **VISAO_GERAL.md**
-2. Depois **DOCUMENTACAO_BACKEND.md**
-3. Depois **DOCUMENTACAO_FRONTEND.md**
-4. Depois **GUIA_USO.md** (para praticar)
-
-### Se Precisa Usar Agora
-1. **QUICK_START.md** (10 min)
-2. **GUIA_OBS_MOBLIN.md** (se quiser câmeras reais)
-
-## 💡 Dica de Ouro
-
-**Não lê tudo de uma vez!** Lê conforme a necessidade:
-
-- Quer instalar? → GUIA_USO.md
-- Quer entender? → DOCUMENTACAO_BACKEND.md
-- Quer usar Moblin? → GUIA_OBS_MOBLIN.md
-- Quer um overview? → VISAO_GERAL.md
-- Quer rápido? → QUICK_START.md
-
-## 📞 Precisa de Ajuda?
-
-1. Verifica em **GUIA_USO.md** → "Dicas Úteis"
-2. Verifica em **INDEX.md** → "Troubleshooting Rápido"
-3. Procura nos logs do backend (último terminal)
-4. Abre uma issue no repositório
-
-## ✨ Highlights
-
-- 📖 **Documentação em Português** — Fácil de entender
-- 🎯 **Sem Jargão Técnico** — Explicações simples
-- 🚀 **Pronto para Usar** — Quick Start em 10 min
-- 📚 **Completo** — Do iniciante ao desenvolvedor
-- 🔧 **Prático** — Passo a passo, não teoria
-
-## 🗺️ Estrutura
-
-```
-docs/
-├── README.md                    ← VOCÊ ESTÁ AQUI
-├── QUICK_START.md              ← Começa aqui (10 min)
-├── INDEX.md                    ← Índice completo
-├── VISAO_GERAL.md              ← Entendimento geral
-├── GUIA_USO.md                 ← Como usar (setup)
-├── GUIA_OBS_MOBLIN.md          ← Câmeras reais
-├── DOCUMENTACAO_BACKEND.md     ← Backend Go
-└── DOCUMENTACAO_FRONTEND.md    ← Frontend Angular
-```
-
-## 🎁 Bônus
-
-- **Makefile** (../Makefile) — Comandos rápidos
-- **DECISIONS.md** (../DECISIONS.md) — Decisões técnicas
-- **README.md** (../README.md) — Arquivo original
-- **.env.example** — Template de configuração
-
-## 🏁 Começar
-
-```bash
-# Opção 1: Super rápido
-cat docs/QUICK_START.md
-
-# Opção 2: Entender
-cat docs/INDEX.md
-
-# Opção 3: Usar logo
-cat docs/GUIA_USO.md
-```
-
-## ✅ Checklist Final
-
-Quando terminar de ler:
-
-- [ ] Entendo o que é a aplicação
-- [ ] Consigo instalar e rodar
-- [ ] Consigo usar no navegador
-- [ ] Consigo mudar câmeras
-- [ ] Entendo como funciona
-- [ ] Consigo fazer troubleshooting
-
-Se passou em todos: **Parabéns! 🎉 Você domina!**
+Bem-vindo à documentação técnica do **Live Orchestrator**. Este guia fornece uma visão abrangente da arquitetura, serviços, fluxos de comunicação e responsabilidades de cada componente.
 
 ---
 
-**Próximo passo:** Comece com `QUICK_START.md` (10 min) ou `INDEX.md` (5 min).
+## 📋 Índice
 
-**Boa sorte! 🚀**
+### Visão Geral
+- **[ESTRUTURA_GERAL.md](ESTRUTURA_GERAL.md)** — Apanhado geral do projeto, arquitetura em alto nível, estrutura de diretórios e fluxos principais
+- **[COMO_RODAR.md](COMO_RODAR.md)** — guia rápido para subir frontend e backend em desenvolvimento local
+
+### Backend (Go)
+- **[backend/ARQUITETURA.md](backend/ARQUITETURA.md)** — Arquitetura do backend, pacotes, modelos de concorrência, tratamento de erros
+- **[backend/SERVICOS.md](backend/SERVICOS.md)** — Detalhamento de cada serviço (config, API, OBS, MediaMTX, Orchestrator, Events)
+- **[backend/COMUNICACAO.md](backend/COMUNICACAO.md)** — Fluxos de comunicação detalhados (inicialização, sync, reconexão, shutdown)
+
+### Frontend (Angular)
+- **[frontend/ARQUITETURA.md](frontend/ARQUITETURA.md)** — Arquitetura do frontend, componentes, signals, reatividade
+- **[frontend/SERVICOS.md](frontend/SERVICOS.md)** — Serviços (ApiService, WebSocketService, Interceptor, Models)
+- **[frontend/COMUNICACAO.md](frontend/COMUNICACAO.md)** — Fluxos de interação (HTTP requests, WebSocket events, error handling)
+
+---
+
+## 🎯 Por Onde Começar?
+
+**Primeiro acesso?** Comece por:
+1. [ESTRUTURA_GERAL.md](ESTRUTURA_GERAL.md) — Entender visão geral
+2. [COMO_RODAR.md](COMO_RODAR.md) — Subir os ambientes localmente
+3. [backend/ARQUITETURA.md](backend/ARQUITETURA.md) — Aprender core da lógica
+4. [frontend/ARQUITETURA.md](frontend/ARQUITETURA.md) — Entender UI
+
+**Debugar um fluxo específico?**
+1. [backend/COMUNICACAO.md](backend/COMUNICACAO.md) — Entender o que backend faz
+2. [frontend/COMUNICACAO.md](frontend/COMUNICACAO.md) — Entender o que frontend faz
+3. [backend/SERVICOS.md](backend/SERVICOS.md) / [frontend/SERVICOS.md](frontend/SERVICOS.md) — Detalhar implementação
+
+**Adicionar nova feature?**
+1. [backend/SERVICOS.md](backend/SERVICOS.md) — Onde adicionar no backend?
+2. [frontend/SERVICOS.md](frontend/SERVICOS.md) — Onde adicionar no frontend?
+3. [backend/COMUNICACAO.md](backend/COMUNICACAO.md) — Como integrar ao fluxo?
+
+---
+
+## 🏗️ Estrutura Rápida
+
+### Backend
+```
+cmd/server/main.go          Entry point
+internal/
+  config/                   Variáveis de ambiente
+  httpapi/                  Endpoints REST + WebSocket
+  mediaserver/              Cliente MediaMTX
+  obs/                      Cliente OBS Studio
+  orchestrator/             Core da lógica
+  events/                   Pub/sub para eventos
+```
+
+### Frontend
+```
+app.ts                      Componente raiz
+core/
+  models.ts                 Tipos TypeScript
+  api.service.ts            Serviço HTTP
+  api-token.interceptor.ts  Token no header
+  websocket.service.ts      Conexão WebSocket
+features/
+  camera-grid/              Grid de câmeras
+  control-bar/              Status do sistema
+```
+
+---
+
+## 🔄 Fluxos Principais
+
+### 1. Inicialização
+```
+Backend starts → MediaMTX + OBS conectam → Sync loop inicia
+     ↓
+Frontend loads → HTTP snapshot → WebSocket abre
+     ↓
+Sistema pronto
+```
+
+### 2. Sincronização (a cada 3s)
+```
+Sync loop query MediaMTX → Detecta câmeras → Atualiza OBS
+     ↓
+Publica evento para WebSocket
+     ↓
+Frontend recebe → Atualiza UI
+```
+
+### 3. Seleção de Câmera (Ao Vivo)
+```
+User clica card → POST /api/v1/cameras/{id}/live
+     ↓
+Backend SetLive() → OBS visibilidade
+     ↓
+Publica event → WebSocket
+     ↓
+Frontend atualiza UI
+```
+
+---
+
+## 📡 Contratos de Dados
+
+### Modelos Compartilhados
+
+**Camera**
+```typescript
+{
+  id: string;
+  name: string;
+  sourceUrl: string;
+  status: "online" | "offline";
+  obsSourceCreated: boolean;
+  isLive: boolean;
+  lastSeenAt: string;
+}
+```
+
+**SystemStatus**
+```typescript
+{
+  obsConnected: boolean;
+  mediaServerConnected: boolean;
+  streaming: boolean;
+  activeSceneName: string;
+  liveCameraId: string;
+}
+```
+
+---
+
+## 🔗 Dependências Externas
+
+| Serviço | Porta | Protocolo | Usado por |
+|---------|-------|-----------|-----------|
+| MediaMTX API | 9997 | HTTP | Backend |
+| OBS Studio | 4455 | WebSocket | Backend |
+| Backend | 8080 | HTTP + WS | Frontend |
+| Frontend | 4200 | HTTP (dev) | Navegador |
+
+---
+
+## 🚀 Cheat Sheet — Encontrar Algo
+
+| Você quer... | Veja... |
+|-------------|---------|
+| Entender como câmeras são descobertas | backend/COMUNICACAO.md — Seção 2 (Sync Loop) |
+| Debugar por que camera não aparece | backend/ARQUITETURA.md — Orchestrator |
+| Entender fluxo de "set live" | backend/COMUNICACAO.md — Seção 3 |
+| Saber por que WebSocket desconecta | frontend/COMUNICACAO.md — Seção 7 |
+| Adicionar novo endpoint REST | backend/SERVICOS.md — HTTP API Server |
+| Adicionar novo tipo de evento | frontend/SERVICOS.md — WebSocket Service |
+| Entender como reconexão funciona | backend/COMUNICACAO.md — Seção 5 (OBS) |
+| Implementar novo componente Angular | frontend/ARQUITETURA.md — Componentes |
+
+---
+
+## 📝 Convenções
+
+### Nomes
+- **Backend**: `camelCase` (Go)
+- **Frontend**: `camelCase` (TypeScript)
+- **Endpoints**: `/api/v1/<resource>/<action>`
+- **WebSocket event types**: `snake.case`
+
+### Tipos
+- Backend e Frontend **mantêm sincronização** de tipos (JSON serialization)
+- Modelos espelham estrutura exatamente
+
+### Fluxo
+- **Síncrono**: HTTP REST (requisição-resposta)
+- **Assíncrono**: WebSocket (push de eventos)
+
+---
+
+## 🧪 Testes
+
+### Backend
+```bash
+go test ./...              # Todos
+go test ./internal/orchestrator  # Pacote específico
+```
+
+### Frontend
+```bash
+npm test                   # Karma + Jasmine
+npm run build              # Build de produção
+```
+
+---
+
+## 📚 Leitura Recomendada
+
+### Para Backend Engineers
+1. [backend/ARQUITETURA.md](backend/ARQUITETURA.md) — Conceitos principais
+2. [backend/SERVICOS.md](backend/SERVICOS.md) — Implementação de cada serviço
+3. [backend/COMUNICACAO.md](backend/COMUNICACAO.md) — Fluxos em tempo real
+
+### Para Frontend Engineers
+1. [frontend/ARQUITETURA.md](frontend/ARQUITETURA.md) — Estrutura Angular
+2. [frontend/SERVICOS.md](frontend/SERVICOS.md) — Serviços e tipos
+3. [frontend/COMUNICACAO.md](frontend/COMUNICACAO.md) — Interações com usuário
+
+### Para Full-Stack / Product
+1. [ESTRUTURA_GERAL.md](ESTRUTURA_GERAL.md) — Visão completa
+2. [backend/COMUNICACAO.md](backend/COMUNICACAO.md) — Fluxos críticos
+3. [frontend/COMUNICACAO.md](frontend/COMUNICACAO.md) — Experiência do usuário
+
+---
+
+## ❓ FAQ Rápido
+
+**P: Como adicionar suporte a múltiplas cenas?**
+A: Ver [backend/ARQUITETURA.md](backend/ARQUITETURA.md) — Extensibilidade
+
+**P: Por que WebSocket em vez de polling?**
+A: Eficiência, latência, múltiplos clientes sincronizados. Ver [frontend/SERVICOS.md](frontend/SERVICOS.md)
+
+**P: Onde persistir estado?**
+A: Atualmente em memória. Ver [backend/ARQUITETURA.md](backend/ARQUITETURA.md) — Extensibilidade
+
+**P: Como testar sem OBS real?**
+A: Usar `obsmock.Mock`. Ver [backend/SERVICOS.md](backend/SERVICOS.md) — OBS Controller
+
+---
+
+## 🔄 Ciclo de Desenvolvimento
+
+```
+1. Ler documentação relevante
+   ├─ Qual camada? (frontend/backend/ambas)
+   ├─ Qual fluxo afeta? (sync, API, UI)
+   └─ Quais serviços?
+
+2. Entender fluxo atual
+   └─ Ver COMUNICACAO.md apropriada
+
+3. Implementar mudanças
+   ├─ Backend: adicionar método, integrar ao fluxo
+   ├─ Frontend: consumir via API ou WebSocket
+   └─ Testes: unitários + integração
+
+4. Testar ponta a ponta
+   ├─ Make dev-backend + dev-frontend
+   ├─ Fake cameras se necessário
+   └─ WebSocket listener para debug
+
+5. Atualizar documentação
+   ├─ Mudança quebra fluxo existente? → Atualizar COMUNICACAO.md
+   ├─ Novo serviço? → Adicionar seção em SERVICOS.md
+   └─ Arquitetura muda? → Atualizar ARQUITETURA.md + ESTRUTURA_GERAL.md
+```
+
+---
+
+## 🎓 Glossário
+
+| Termo | Significado |
+|-------|------------|
+| **Sync Loop** | Goroutine que roda a cada N segundos sincronizando câmeras |
+| **OBS Input** | Fonte de vídeo no OBS Studio (criada para cada câmera) |
+| **Live Camera** | A câmera selecionada para transmissão (visível no OBS) |
+| **Hub** | Event hub (pub/sub) para distribuir eventos aos clientes |
+| **Signal** | Angular Signals — reatividade granular (muda → renderiza) |
+| **Envelope** | Mensagem JSON no WebSocket com {type, payload} |
+| **Backoff** | Retry com delay crescente (1s, 2s, 4s, ...) |
+
+---
+
+## 📞 Suporte
+
+Dúvidas?
+- Revisite a seção apropriada na documentação
+- Procure o fluxo correspondente em COMUNICACAO.md
+- Cheque exemplos de código em SERVICOS.md
+
+---
+
+**Última atualização**: Julho 2025
+
+Mantido em sincronização com o código-fonte.
