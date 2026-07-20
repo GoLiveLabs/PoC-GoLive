@@ -11,12 +11,17 @@ import (
 	"syscall"
 	"time"
 
+	"live-orchestrator/backend/internal/client"
 	"live-orchestrator/backend/internal/config"
+	"live-orchestrator/backend/internal/dbconn"
 	"live-orchestrator/backend/internal/events"
 	"live-orchestrator/backend/internal/httpapi"
+	"live-orchestrator/backend/internal/ingest"
+	"live-orchestrator/backend/internal/liveid"
 	"live-orchestrator/backend/internal/mediaserver"
 	"live-orchestrator/backend/internal/obs"
 	"live-orchestrator/backend/internal/orchestrator"
+	"live-orchestrator/backend/internal/streamplatform"
 )
 
 const shutdownTimeout = 3 * time.Second
@@ -36,7 +41,18 @@ func main() {
 	orchCtx, orchCancel := context.WithCancel(context.Background())
 	go orch.Run(orchCtx)
 
-	apiServer := httpapi.NewServer(orch, hub, cfg.APIToken)
+	db, err := dbconn.Open(cfg.DatabaseURL)
+	if err != nil {
+		slog.Error("could not connect to database", "error", err)
+		os.Exit(1)
+	}
+
+	clientSvc := client.NewService(db)
+	platformSvc := streamplatform.NewService(db)
+	ingestSvc := ingest.NewService(db, clientSvc)
+	liveIDSvc := liveid.NewService(db, clientSvc, platformSvc)
+
+	apiServer := httpapi.NewServer(orch, hub, cfg.APIToken, clientSvc, ingestSvc, platformSvc, liveIDSvc)
 	httpServer := &http.Server{
 		Addr:    cfg.HTTPAddr,
 		Handler: apiServer.Handler(),

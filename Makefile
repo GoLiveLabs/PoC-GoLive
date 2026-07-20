@@ -7,7 +7,7 @@ dev-frontend:
 	cd frontend && npm start
 
 mediamtx-up:
-	docker compose up -d mediamtx
+	docker compose up -d mediamtx postgres
 
 mediamtx-down:
 	docker compose down

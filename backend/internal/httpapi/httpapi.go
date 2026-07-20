@@ -21,20 +21,43 @@ type Orchestrator interface {
 	SetLive(cameraID string) (orchestrator.SystemStatus, error)
 }
 
-// Server wires the orchestrator to HTTP handlers.
+// Server wires the orchestrator and the client/ingest/streaming-platform/
+// live-id domain services to HTTP handlers.
 type Server struct {
 	orch  Orchestrator
 	hub   *events.Hub
 	token string
 	mux   *http.ServeMux
 
+	clients   ClientService
+	ingests   IngestService
+	platforms StreamPlatformService
+	liveIDs   LiveIDService
+
 	connsMu sync.Mutex
 	conns   map[*websocket.Conn]struct{}
 }
 
 // NewServer creates a Server. Call Handler to get the http.Handler to serve.
-func NewServer(orch Orchestrator, hub *events.Hub, apiToken string) *Server {
-	s := &Server{orch: orch, hub: hub, token: apiToken, conns: make(map[*websocket.Conn]struct{})}
+func NewServer(
+	orch Orchestrator,
+	hub *events.Hub,
+	apiToken string,
+	clients ClientService,
+	ingests IngestService,
+	platforms StreamPlatformService,
+	liveIDs LiveIDService,
+) *Server {
+	s := &Server{
+		orch:      orch,
+		hub:       hub,
+		token:     apiToken,
+		clients:   clients,
+		ingests:   ingests,
+		platforms: platforms,
+		liveIDs:   liveIDs,
+		conns:     make(map[*websocket.Conn]struct{}),
+	}
 	s.routes()
 	return s
 }
@@ -77,6 +100,33 @@ func (s *Server) routes() {
 	mux.HandleFunc("POST /api/v1/cameras/{id}/live", s.handleSetLive)
 	mux.HandleFunc("POST /api/v1/sync", s.handleSync)
 	mux.HandleFunc("GET /api/v1/ws", s.handleWS)
+
+	mux.HandleFunc("POST /api/v1/clients", s.handleCreateClient)
+	mux.HandleFunc("GET /api/v1/clients", s.handleListClients)
+	mux.HandleFunc("GET /api/v1/clients/{id}", s.handleGetClient)
+	mux.HandleFunc("PATCH /api/v1/clients/{id}", s.handleUpdateClient)
+	mux.HandleFunc("DELETE /api/v1/clients/{id}", s.handleDeleteClient)
+
+	mux.HandleFunc("POST /api/v1/clients/{clientID}/ingests", s.handleCreateIngest)
+	mux.HandleFunc("GET /api/v1/clients/{clientID}/ingests", s.handleListIngestsByClient)
+	mux.HandleFunc("GET /api/v1/ingests", s.handleListIngestsFlat)
+	mux.HandleFunc("GET /api/v1/ingests/{id}", s.handleGetIngest)
+	mux.HandleFunc("PATCH /api/v1/ingests/{id}", s.handleUpdateIngest)
+	mux.HandleFunc("DELETE /api/v1/ingests/{id}", s.handleDeleteIngest)
+
+	mux.HandleFunc("POST /api/v1/streaming-platforms", s.handleCreatePlatform)
+	mux.HandleFunc("GET /api/v1/streaming-platforms", s.handleListPlatforms)
+	mux.HandleFunc("GET /api/v1/streaming-platforms/{id}", s.handleGetPlatform)
+	mux.HandleFunc("PATCH /api/v1/streaming-platforms/{id}", s.handleUpdatePlatform)
+	mux.HandleFunc("DELETE /api/v1/streaming-platforms/{id}", s.handleDeletePlatform)
+
+	mux.HandleFunc("POST /api/v1/clients/{clientID}/live-ids", s.handleCreateLiveID)
+	mux.HandleFunc("GET /api/v1/clients/{clientID}/live-ids", s.handleListLiveIDsByClient)
+	mux.HandleFunc("GET /api/v1/live-ids", s.handleListLiveIDsFlat)
+	mux.HandleFunc("GET /api/v1/live-ids/{id}", s.handleGetLiveID)
+	mux.HandleFunc("PATCH /api/v1/live-ids/{id}", s.handleUpdateLiveID)
+	mux.HandleFunc("DELETE /api/v1/live-ids/{id}", s.handleDeleteLiveID)
+
 	s.mux = mux
 }
 

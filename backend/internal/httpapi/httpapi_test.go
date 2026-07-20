@@ -33,7 +33,7 @@ func (f *fakeOrchestrator) SetLive(cameraID string) (orchestrator.SystemStatus, 
 
 func newTestServer(orch *fakeOrchestrator) http.Handler {
 	hub := events.NewHub()
-	return NewServer(orch, hub, testToken).Handler()
+	return NewServer(orch, hub, testToken, nil, nil, nil, nil).Handler()
 }
 
 func TestHealth_NoTokenRequired(t *testing.T) {

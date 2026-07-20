@@ -1,0 +1,59 @@
+# === Documentação (Markdown) ===
+*.md
+
+# === Ferramentas de IA / assistentes de código ===
+.claude/
+.cursor/
+.windsurf/
+.agents/
+.github/copilot*
+
+# === Variáveis de ambiente / segredos ===
+.env
+.env.*
+!.env.example
+
+# === Go (backend) ===
+backend/bin/
+backend/dist/
+backend/tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# === Node / Angular (frontend) ===
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/out-tsc/
+frontend/bazel-out/
+npm-debug.log*
+yarn-error.log*
+
+# === Docker ===
+docker-compose.override.yml
+
+# === IDEs / editores ===
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-workspace
+
+# === Sistema operacional ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Logs e temporários ===
+*.log
+*.tmp
+/tmp/
