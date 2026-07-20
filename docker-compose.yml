@@ -8,9 +8,6 @@ services:
     volumes:
       - ./mediamtx.yml:/mediamtx.yml:ro
 
-  
-
-
   backend:
     image: ghcr.io/golivelabs/golive-backend:latest
     environment:
@@ -36,8 +33,7 @@ services:
       - "4200:4200"
     depends_on:
       - backend
-
-  services:
+      
   nginx:
     image: nginx:alpine
     container_name: nginx
