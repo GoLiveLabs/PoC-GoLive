@@ -1,5 +1,5 @@
 import { WebSocketService } from './websocket.service';
-import { Camera, SystemStatus } from './models';
+import { Camera, Position, SystemStatus } from './models';
 
 describe('WebSocketService', () => {
   let service: WebSocketService;
@@ -10,6 +10,7 @@ describe('WebSocketService', () => {
 
   it('starts with empty cameras and null status', () => {
     expect(service.cameras()).toEqual([]);
+    expect(service.positions()).toEqual([]);
     expect(service.systemStatus()).toBeNull();
     expect(service.lastError()).toBeNull();
   });
@@ -21,8 +22,6 @@ describe('WebSocketService', () => {
         name: 'camera1',
         sourceUrl: 'rtmp://mediamtx:1935/camera1',
         status: 'online',
-        obsSourceCreated: true,
-        isLive: false,
         lastSeenAt: '2026-07-16T14:00:00Z',
       },
     ];
@@ -31,13 +30,21 @@ describe('WebSocketService', () => {
     expect(service.cameras()).toEqual(cams);
   });
 
+  it('applies a positions.updated event to the positions signal', () => {
+    const positions: Position[] = [
+      { id: 'position1', name: 'Posição 1', cameraId: 'camera1', isAudioSource: true },
+    ];
+    service.handleMessage(JSON.stringify({ type: 'positions.updated', payload: positions }));
+
+    expect(service.positions()).toEqual(positions);
+  });
+
   it('applies a system.status event to the systemStatus signal', () => {
     const status: SystemStatus = {
       obsConnected: true,
       mediaServerConnected: true,
       streaming: true,
       activeSceneName: 'Program',
-      liveCameraId: 'camera1',
     };
     service.handleMessage(JSON.stringify({ type: 'system.status', payload: status }));
 

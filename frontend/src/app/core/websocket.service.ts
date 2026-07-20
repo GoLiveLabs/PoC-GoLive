@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { environment } from '../../environments/environment';
-import { Camera, ConnectionState, ErrorPayload, SystemStatus, WsEnvelope } from './models';
+import { Camera, ConnectionState, ErrorPayload, Position, SystemStatus, WsEnvelope } from './models';
 
 const INITIAL_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30000;
@@ -8,6 +8,7 @@ const MAX_RECONNECT_DELAY_MS = 30000;
 @Injectable({ providedIn: 'root' })
 export class WebSocketService {
   readonly cameras = signal<Camera[]>([]);
+  readonly positions = signal<Position[]>([]);
   readonly systemStatus = signal<SystemStatus | null>(null);
   readonly connectionState = signal<ConnectionState>('connecting');
   readonly lastError = signal<string | null>(null);
@@ -73,6 +74,9 @@ export class WebSocketService {
     switch (envelope.type) {
       case 'cameras.updated':
         this.cameras.set(envelope.payload as Camera[]);
+        break;
+      case 'positions.updated':
+        this.positions.set(envelope.payload as Position[]);
         break;
       case 'system.status':
         this.systemStatus.set(envelope.payload as SystemStatus);

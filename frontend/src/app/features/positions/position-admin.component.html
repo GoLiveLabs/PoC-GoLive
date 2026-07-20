@@ -1,0 +1,89 @@
+<section class="position-admin">
+  <div class="position-admin__header">
+    <h2 class="position-admin__title">Posições</h2>
+  </div>
+
+  @if (positions().length === 0) {
+    <div class="position-admin__empty">
+      <p>Nenhuma posição cadastrada.</p>
+      <p>Crie sua primeira posição para começar a atribuir câmeras.</p>
+    </div>
+  } @else {
+    <ul class="position-admin__list">
+      @for (position of positions(); track position.id) {
+        <li class="position-admin__item">
+          @if (editingId() === position.id) {
+            <form class="position-admin__rename-form" (submit)="$event.preventDefault(); onRenameSubmit()">
+              <input
+                type="text"
+                class="position-admin__input"
+                [value]="editingName()"
+                (input)="editingName.set($any($event.target).value)"
+                autofocus
+              />
+              <button type="submit" class="btn btn--confirm">Salvar</button>
+              <button type="button" class="btn btn--cancel" (click)="cancelRename()">Cancelar</button>
+            </form>
+          } @else {
+            <span class="position-admin__name">
+              {{ position.name }}
+              @if (position.isAudioSource) {
+                <span class="badge badge--audio" title="Fonte de áudio">🔊</span>
+              }
+            </span>
+            <span class="position-admin__camera">
+              @if (position.cameraId) {
+                {{ cameraName(position.cameraId) }}
+              } @else {
+                <span class="position-admin__empty-indicator">vazia</span>
+              }
+            </span>
+            <div class="position-admin__actions">
+              @if (position.cameraId && !position.isAudioSource) {
+                <button
+                  type="button"
+                  class="btn btn--audio"
+                  title="Definir como fonte de áudio"
+                  (click)="onSetAudio(position.id)"
+                >
+                  🔊
+                </button>
+              }
+              <button
+                type="button"
+                class="btn btn--rename"
+                title="Renomear"
+                (click)="startRename(position)"
+              >
+                ✏️
+              </button>
+              <button
+                type="button"
+                class="btn btn--delete"
+                title="Excluir"
+                (click)="onDelete(position.id)"
+              >
+                🗑️
+              </button>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  <form class="position-admin__create-form" (submit)="$event.preventDefault(); onCreateSubmit()">
+    <input
+      type="text"
+      class="position-admin__input"
+      placeholder="Nome da nova posição"
+      [value]="newName()"
+      (input)="newName.set($any($event.target).value); validationError.set(null)"
+    />
+    <button type="submit" class="btn btn--create">Criar posição</button>
+  </form>
+
+  @if (validationError()) {
+    <p class="position-admin__error">{{ validationError() }}</p>
+  }
+</section>

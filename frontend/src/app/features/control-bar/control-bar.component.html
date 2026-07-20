@@ -17,23 +17,36 @@
 
     <span
       class="indicator"
-      [class.indicator--ok]="systemStatus()?.obsConnected"
-      [class.indicator--fail]="!systemStatus()?.obsConnected"
+      [class.indicator--ok]="positions().length > 0"
+      [class.indicator--fail]="positions().length === 0"
     >
-      OBS: {{ systemStatus()?.obsConnected ? 'conectado' : 'desconectado' }}
+      Posições: {{ positions().length }}
     </span>
 
-    <span
-      class="indicator"
-      [class.indicator--ok]="systemStatus()?.mediaServerConnected"
-      [class.indicator--fail]="!systemStatus()?.mediaServerConnected"
-    >
-      MediaMTX: {{ systemStatus()?.mediaServerConnected ? 'conectado' : 'desconectado' }}
-    </span>
+    @for (position of positions(); track position.id) {
+      <span
+        class="indicator indicator--position"
+        [class.indicator--audio]="position.isAudioSource"
+        [class.indicator--occupied]="!!position.cameraId"
+        [class.indicator--empty]="!position.cameraId"
+      >
+        {{ position.name }}:
+        @if (position.cameraId) {
+          {{ position.cameraId }}
+          @if (position.isAudioSource) {
+            🔊
+          }
+        } @else {
+          <span class="indicator__empty">vazia</span>
+        }
+      </span>
+    }
 
-    <span class="indicator">
-      No ar: {{ systemStatus()?.liveCameraId || 'nenhuma câmera' }}
-    </span>
+    @if (audioPosition(); as audio) {
+      <span class="indicator indicator--audio-source">
+        Áudio: {{ audio.name }} ({{ audio.cameraId || 'sem câmera' }})
+      </span>
+    }
   </div>
 
   <button type="button" class="control-bar__sync" (click)="onSyncClick()">Sincronizar agora</button>

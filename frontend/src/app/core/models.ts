@@ -5,8 +5,6 @@ export interface Camera {
   name: string;
   sourceUrl: string;
   status: CameraStatus;
-  obsSourceCreated: boolean;
-  isLive: boolean;
   lastSeenAt: string;
 }
 
@@ -15,10 +13,16 @@ export interface SystemStatus {
   mediaServerConnected: boolean;
   streaming: boolean;
   activeSceneName: string;
-  liveCameraId: string;
 }
 
-export type WsEventType = 'cameras.updated' | 'system.status' | 'error';
+export interface Position {
+  id: string;
+  name: string;
+  cameraId: string;
+  isAudioSource: boolean;
+}
+
+export type WsEventType = 'cameras.updated' | 'system.status' | 'positions.updated' | 'error';
 
 export interface WsEnvelope<T = unknown> {
   type: WsEventType;

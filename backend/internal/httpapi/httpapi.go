@@ -18,7 +18,14 @@ type Orchestrator interface {
 	Cameras() []orchestrator.Camera
 	Status() orchestrator.SystemStatus
 	SyncOnce(ctx context.Context) []orchestrator.Camera
-	SetLive(cameraID string) (orchestrator.SystemStatus, error)
+
+	Positions() []orchestrator.Position
+	CreatePosition(name string) (orchestrator.Position, error)
+	RenamePosition(id, newName string) (orchestrator.Position, error)
+	DeletePosition(id string) error
+	AssignCamera(positionID, cameraID string) (orchestrator.Position, error)
+	UnassignPosition(positionID string) (orchestrator.Position, error)
+	SetAudioPosition(positionID string) (orchestrator.Position, error)
 }
 
 // Server wires the orchestrator and the client/ingest/streaming-platform/
@@ -97,11 +104,10 @@ func (s *Server) routes() {
 	mux.HandleFunc("GET /api/v1/health", s.handleHealth)
 	mux.HandleFunc("GET /api/v1/cameras", s.handleListCameras)
 	mux.HandleFunc("GET /api/v1/status", s.handleStatus)
-	mux.HandleFunc("POST /api/v1/cameras/{id}/live", s.handleSetLive)
 	mux.HandleFunc("POST /api/v1/sync", s.handleSync)
 	mux.HandleFunc("GET /api/v1/ws", s.handleWS)
 
-	mux.HandleFunc("POST /api/v1/clients", s.handleCreateClient)
+mux.HandleFunc("POST /api/v1/clients", s.handleCreateClient)
 	mux.HandleFunc("GET /api/v1/clients", s.handleListClients)
 	mux.HandleFunc("GET /api/v1/clients/{id}", s.handleGetClient)
 	mux.HandleFunc("PATCH /api/v1/clients/{id}", s.handleUpdateClient)
@@ -127,7 +133,30 @@ func (s *Server) routes() {
 	mux.HandleFunc("PATCH /api/v1/live-ids/{id}", s.handleUpdateLiveID)
 	mux.HandleFunc("DELETE /api/v1/live-ids/{id}", s.handleDeleteLiveID)
 
+	mux.HandleFunc("GET /api/v1/positions", s.handleListPositions)
+	mux.HandleFunc("POST /api/v1/positions", s.handleCreatePosition)
+	mux.HandleFunc("PATCH /api/v1/positions/{id}", s.handleRenamePosition)
+	mux.HandleFunc("DELETE /api/v1/positions/{id}", s.handleDeletePosition)
+	mux.HandleFunc("POST /api/v1/positions/{id}/camera", s.handleAssignCamera)
+	mux.HandleFunc("DELETE /api/v1/positions/{id}/camera", s.handleUnassignPosition)
+	mux.HandleFunc("POST /api/v1/positions/{id}/audio", s.handleSetAudioPosition)
+
 	s.mux = mux
+}
+
+// createPositionRequest is the body of POST /api/v1/positions.
+type createPositionRequest struct {
+	Name string `json:"name"`
+}
+
+// renamePositionRequest is the body of PATCH /api/v1/positions/{id}.
+type renamePositionRequest struct {
+	Name string `json:"name"`
+}
+
+// assignCameraRequest is the body of POST /api/v1/positions/{id}/camera.
+type assignCameraRequest struct {
+	CameraID string `json:"cameraId"`
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -157,21 +186,110 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, cams)
 }
 
-func (s *Server) handleSetLive(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	status, err := s.orch.SetLive(id)
-	if err == nil {
-		writeJSON(w, http.StatusOK, status)
+func (s *Server) handleListPositions(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.orch.Positions())
+}
+
+func (s *Server) handleCreatePosition(w http.ResponseWriter, r *http.Request) {
+	var req createPositionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
 		return
 	}
 
+	pos, err := s.orch.CreatePosition(req.Name)
+	if err == nil {
+		writeJSON(w, http.StatusCreated, pos)
+		return
+	}
+	writePositionError(w, err)
+}
+
+func (s *Server) handleRenamePosition(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req renamePositionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	pos, err := s.orch.RenamePosition(id, req.Name)
+	if err == nil {
+		writeJSON(w, http.StatusOK, pos)
+		return
+	}
+	writePositionError(w, err)
+}
+
+func (s *Server) handleDeletePosition(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	err := s.orch.DeletePosition(id)
+	if err == nil {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	writePositionError(w, err)
+}
+
+func (s *Server) handleAssignCamera(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var req assignCameraRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "corpo da requisição inválido")
+		return
+	}
+
+	pos, err := s.orch.AssignCamera(id, req.CameraID)
+	if err == nil {
+		writeJSON(w, http.StatusOK, pos)
+		return
+	}
+	writePositionError(w, err)
+}
+
+func (s *Server) handleUnassignPosition(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	pos, err := s.orch.UnassignPosition(id)
+	if err == nil {
+		writeJSON(w, http.StatusOK, pos)
+		return
+	}
+	writePositionError(w, err)
+}
+
+func (s *Server) handleSetAudioPosition(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	pos, err := s.orch.SetAudioPosition(id)
+	if err == nil {
+		writeJSON(w, http.StatusOK, pos)
+		return
+	}
+	writePositionError(w, err)
+}
+
+// writePositionError maps a position/camera sentinel error to its HTTP
+// status code and Portuguese message, per _techspec.md's API Endpoints
+// error-to-status table.
+func writePositionError(w http.ResponseWriter, err error) {
 	switch {
+	case isErr(err, orchestrator.ErrPositionNotFound):
+		writeError(w, http.StatusNotFound, "posição não encontrada")
 	case isErr(err, orchestrator.ErrCameraNotFound):
 		writeError(w, http.StatusNotFound, "câmera não encontrada")
 	case isErr(err, orchestrator.ErrCameraOffline):
 		writeError(w, http.StatusConflict, "câmera está offline")
+	case isErr(err, orchestrator.ErrPositionNameTaken):
+		writeError(w, http.StatusConflict, "nome de posição já utilizado")
+	case isErr(err, orchestrator.ErrPositionNameEmpty):
+		writeError(w, http.StatusUnprocessableEntity, "nome de posição não pode ser vazio")
+	case isErr(err, orchestrator.ErrPositionNameTooLong):
+		writeError(w, http.StatusUnprocessableEntity, "nome de posição excede o tamanho máximo permitido")
+	case isErr(err, orchestrator.ErrPositionEmpty):
+		writeError(w, http.StatusUnprocessableEntity, "posição não possui câmera atribuída")
 	case isErr(err, orchestrator.ErrOBSUnreachable):
 		writeError(w, http.StatusBadGateway, "OBS está inacessível no momento")
+	case isErr(err, orchestrator.ErrPositionOBSInputMissing):
+		writeError(w, http.StatusBadGateway, "input do OBS da posição não encontrado")
 	default:
 		writeError(w, http.StatusInternalServerError, "erro interno")
 	}

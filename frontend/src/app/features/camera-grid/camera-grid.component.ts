@@ -1,5 +1,5 @@
 import { Component, input, output } from '@angular/core';
-import { Camera } from '../../core/models';
+import { Camera, Position } from '../../core/models';
 import { CameraCardComponent } from './camera-card.component';
 
 @Component({
@@ -11,5 +11,8 @@ import { CameraCardComponent } from './camera-card.component';
 })
 export class CameraGridComponent {
   cameras = input.required<Camera[]>();
-  goLive = output<string>();
+  positions = input.required<Position[]>();
+
+  assign = output<{ positionId: string; cameraId: string }>();
+  unassign = output<string>();
 }

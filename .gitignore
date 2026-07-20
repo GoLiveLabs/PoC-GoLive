@@ -6,6 +6,7 @@
 .cursor/
 .windsurf/
 .agents/
+.compozy/
 .github/copilot*
 
 # === Variáveis de ambiente / segredos ===
@@ -57,3 +58,6 @@ desktop.ini
 *.log
 *.tmp
 /tmp/
+
+# === Ferramentas de workflow / IA ===
+.compozy

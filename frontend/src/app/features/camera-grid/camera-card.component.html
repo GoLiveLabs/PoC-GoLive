@@ -1,4 +1,4 @@
-<div class="camera-card" [class.camera-card--live]="camera().isLive">
+<div class="camera-card">
   <div class="camera-card__header">
     <span class="camera-card__name">{{ camera().name }}</span>
     <span
@@ -14,16 +14,18 @@
     <span class="camera-card__preview-placeholder">Pré-visualização indisponível</span>
   </div>
 
-  @if (camera().isLive) {
-    <div class="camera-card__live-badge">NO AR</div>
-  }
-
-  <button
-    type="button"
-    class="camera-card__button"
-    [disabled]="camera().status === 'offline' || camera().isLive"
-    (click)="onGoLiveClick()"
-  >
-    Colocar no ar
-  </button>
+  <label class="camera-card__assignment">
+    Posição
+    <select
+      class="camera-card__select"
+      [disabled]="camera().status === 'offline'"
+      [value]="currentPositionId()"
+      (change)="onAssignmentChange($any($event.target).value)"
+    >
+      <option [value]="noneOption">Nenhuma</option>
+      @for (position of positions(); track position.id) {
+        <option [value]="position.id">{{ position.name }}</option>
+      }
+    </select>
+  </label>
 </div>

@@ -10,11 +10,6 @@
   position: relative;
 }
 
-.camera-card--live {
-  border-color: #e5484d;
-  box-shadow: 0 0 0 3px rgba(229, 72, 77, 0.35);
-}
-
 .camera-card__header {
   display: flex;
   justify-content: space-between;
@@ -58,31 +53,25 @@
   font-size: 0.85rem;
 }
 
-.camera-card__live-badge {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: #e5484d;
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.7rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 0.25rem;
-  letter-spacing: 0.05em;
+.camera-card__assignment {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #ccc;
 }
 
-.camera-card__button {
-  padding: 0.5rem 0.75rem;
+.camera-card__select {
+  padding: 0.5rem 0.6rem;
   border-radius: 0.5rem;
-  border: none;
-  background: #2f6fed;
-  color: #fff;
+  border: 1px solid #3a3a3a;
+  background: #101010;
+  color: #f2f2f2;
   font-weight: 600;
-  cursor: pointer;
 }
 
-.camera-card__button:disabled {
-  background: #3a3a3a;
-  color: #888;
+.camera-card__select:disabled {
+  background: #262626;
+  color: #777;
   cursor: not-allowed;
 }

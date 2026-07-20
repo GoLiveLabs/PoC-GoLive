@@ -3,9 +3,9 @@
 package obs
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 
@@ -19,24 +19,34 @@ import (
 // InputKind is the OBS input kind used for camera sources fed by MediaMTX.
 const InputKind = "ffmpeg_source"
 
-// CamPrefix prefixes every input created by the orchestrator, so it never
-// collides with sources the operator created manually in OBS.
-const CamPrefix = "cam_"
-
 const (
 	initialBackoff = 1 * time.Second
 	maxBackoff     = 30 * time.Second
 	healthInterval = 5 * time.Second
 )
 
-// Controller is the OBS operations the orchestrator depends on.
+// ErrInputNotFound is returned by position-scoped calls that require an
+// existing OBS input (created by CreatePositionInput) and find none.
+var ErrInputNotFound = errors.New("obs input not found")
+
+// Controller is the OBS operations the orchestrator depends on. Every
+// position-scoped method operates on the single input belonging to a
+// position (named by the caller), never on any other scene item.
 type Controller interface {
 	EnsureScene(name string) error
-	CreateCameraInput(sceneName, inputName, url string) error
+	// CreatePositionInput creates a new, initially disabled input named
+	// inputName in sceneName. It fails if an input with that name already
+	// exists — it never updates one.
+	CreatePositionInput(sceneName, inputName string) error
+	// UpdatePositionSource points inputName's source at url. It fails with
+	// ErrInputNotFound if the input doesn't exist — it never creates one.
+	UpdatePositionSource(inputName, url string) error
+	// SetPositionEnabled toggles inputName's own scene item in sceneName,
+	// never touching any other scene item.
+	SetPositionEnabled(sceneName, inputName string, enabled bool) error
+	// SetInputAudioMuted mutes or unmutes inputName in the program mix.
+	SetInputAudioMuted(inputName string, muted bool) error
 	RemoveInput(inputName string) error
-	// SetOnlyVisibleSource shows inputName and hides every other scene item
-	// prefixed with CamPrefix in sceneName.
-	SetOnlyVisibleSource(sceneName, inputName string) error
 	IsConnected() bool
 	Reconnect() error
 }
@@ -217,32 +227,39 @@ func inputSettings(url string) map[string]any {
 	}
 }
 
-// CreateCameraInput creates a ffmpeg_source input for the given URL and adds
-// it to sceneName. If the input already exists, its settings are updated
-// instead of failing.
-func (o *ObsController) CreateCameraInput(sceneName, inputName, url string) error {
+func (o *ObsController) findInput(inputName string) (bool, error) {
+	client, err := o.getClient()
+	if err != nil {
+		return false, err
+	}
+	list, err := client.Inputs.GetInputList()
+	if err != nil {
+		return false, fmt.Errorf("listing inputs: %w", err)
+	}
+	for _, in := range list.Inputs {
+		if in.InputName == inputName {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// CreatePositionInput creates a new, initially disabled ffmpeg_source input
+// named inputName in sceneName, with no source URL configured yet. It fails
+// if an input with that name already exists — it never recreates or updates
+// one (ADR-003).
+func (o *ObsController) CreatePositionInput(sceneName, inputName string) error {
 	client, err := o.getClient()
 	if err != nil {
 		return err
 	}
 
-	list, err := client.Inputs.GetInputList()
+	exists, err := o.findInput(inputName)
 	if err != nil {
-		return fmt.Errorf("listing inputs: %w", err)
+		return err
 	}
-	for _, in := range list.Inputs {
-		if in.InputName == inputName {
-			_, err := client.Inputs.SetInputSettings(
-				inputs.NewSetInputSettingsParams().
-					WithInputName(inputName).
-					WithInputSettings(inputSettings(url)).
-					WithOverlay(false),
-			)
-			if err != nil {
-				return fmt.Errorf("updating input %q settings: %w", inputName, err)
-			}
-			return nil
-		}
+	if exists {
+		return fmt.Errorf("input %q already exists", inputName)
 	}
 
 	_, err = client.Inputs.CreateInput(
@@ -250,11 +267,40 @@ func (o *ObsController) CreateCameraInput(sceneName, inputName, url string) erro
 			WithSceneName(sceneName).
 			WithInputName(inputName).
 			WithInputKind(InputKind).
-			WithInputSettings(inputSettings(url)).
-			WithSceneItemEnabled(true),
+			WithInputSettings(inputSettings("")).
+			WithSceneItemEnabled(false),
 	)
 	if err != nil {
 		return fmt.Errorf("creating input %q: %w", inputName, err)
+	}
+	return nil
+}
+
+// UpdatePositionSource points inputName's source at url. It fails with
+// ErrInputNotFound if the input doesn't exist — it never creates one
+// (ADR-003).
+func (o *ObsController) UpdatePositionSource(inputName, url string) error {
+	client, err := o.getClient()
+	if err != nil {
+		return err
+	}
+
+	exists, err := o.findInput(inputName)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return ErrInputNotFound
+	}
+
+	_, err = client.Inputs.SetInputSettings(
+		inputs.NewSetInputSettingsParams().
+			WithInputName(inputName).
+			WithInputSettings(inputSettings(url)).
+			WithOverlay(false),
+	)
+	if err != nil {
+		return fmt.Errorf("updating input %q settings: %w", inputName, err)
 	}
 	return nil
 }
@@ -272,9 +318,10 @@ func (o *ObsController) RemoveInput(inputName string) error {
 	return nil
 }
 
-// SetOnlyVisibleSource enables inputName's scene item in sceneName and
-// disables every other scene item prefixed with CamPrefix.
-func (o *ObsController) SetOnlyVisibleSource(sceneName, inputName string) error {
+// SetPositionEnabled toggles inputName's own scene item in sceneName,
+// leaving every other scene item untouched. It fails with ErrInputNotFound
+// if the position's input has no scene item in sceneName.
+func (o *ObsController) SetPositionEnabled(sceneName, inputName string, enabled bool) error {
 	client, err := o.getClient()
 	if err != nil {
 		return err
@@ -288,10 +335,9 @@ func (o *ObsController) SetOnlyVisibleSource(sceneName, inputName string) error 
 	}
 
 	for _, item := range list.SceneItems {
-		if !strings.HasPrefix(item.SourceName, CamPrefix) {
+		if item.SourceName != inputName {
 			continue
 		}
-		enabled := item.SourceName == inputName
 		_, err := client.SceneItems.SetSceneItemEnabled(
 			sceneitems.NewSetSceneItemEnabledParams().
 				WithSceneName(sceneName).
@@ -299,8 +345,25 @@ func (o *ObsController) SetOnlyVisibleSource(sceneName, inputName string) error 
 				WithSceneItemEnabled(enabled),
 		)
 		if err != nil {
-			return fmt.Errorf("setting visibility of %q: %w", item.SourceName, err)
+			return fmt.Errorf("setting visibility of %q: %w", inputName, err)
 		}
+		return nil
+	}
+	return ErrInputNotFound
+}
+
+// SetInputAudioMuted mutes or unmutes inputName in the program mix
+// (ADR-004).
+func (o *ObsController) SetInputAudioMuted(inputName string, muted bool) error {
+	client, err := o.getClient()
+	if err != nil {
+		return err
+	}
+	_, err = client.Inputs.SetInputMute(
+		inputs.NewSetInputMuteParams().WithInputName(inputName).WithInputMuted(muted),
+	)
+	if err != nil {
+		return fmt.Errorf("setting mute for %q: %w", inputName, err)
 	}
 	return nil
 }

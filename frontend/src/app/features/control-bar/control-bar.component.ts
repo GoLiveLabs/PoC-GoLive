@@ -1,5 +1,5 @@
-import { Component, input, output } from '@angular/core';
-import { ConnectionState, SystemStatus } from '../../core/models';
+import { Component, input, output, computed } from '@angular/core';
+import { ConnectionState, Position } from '../../core/models';
 
 @Component({
   selector: 'app-control-bar',
@@ -8,9 +8,11 @@ import { ConnectionState, SystemStatus } from '../../core/models';
   styleUrl: './control-bar.component.css',
 })
 export class ControlBarComponent {
-  systemStatus = input<SystemStatus | null>(null);
+  positions = input.required<Position[]>();
   connectionState = input<ConnectionState>('connecting');
   sync = output<void>();
+
+  readonly audioPosition = computed(() => this.positions().find((p) => p.isAudioSource) ?? null);
 
   onSyncClick(): void {
     this.sync.emit();

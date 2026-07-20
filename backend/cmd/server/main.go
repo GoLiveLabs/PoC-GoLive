@@ -21,6 +21,7 @@ import (
 	"live-orchestrator/backend/internal/mediaserver"
 	"live-orchestrator/backend/internal/obs"
 	"live-orchestrator/backend/internal/orchestrator"
+"live-orchestrator/backend/internal/positions"
 	"live-orchestrator/backend/internal/streamplatform"
 )
 
@@ -36,7 +37,8 @@ func main() {
 	msClient := mediaserver.NewClient(cfg.MediaMTXAPIURL)
 	obsCtl := obs.New(cfg.OBSAddr, cfg.OBSPassword)
 	hub := events.NewHub()
-	orch := orchestrator.New(msClient, obsCtl, hub, cfg.ProgramScene, cfg.SyncInterval, cfg.MediaSourceBaseURL)
+	positionsStore := positions.NewFileStore(cfg.PositionsStorePath)
+	orch := orchestrator.New(msClient, obsCtl, hub, cfg.ProgramScene, cfg.SyncInterval, cfg.MediaSourceBaseURL, positionsStore)
 
 	orchCtx, orchCancel := context.WithCancel(context.Background())
 	go orch.Run(orchCtx)

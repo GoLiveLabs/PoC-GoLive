@@ -3,7 +3,12 @@
 } @else {
   <div class="camera-grid">
     @for (camera of cameras(); track camera.id) {
-      <app-camera-card [camera]="camera" (goLive)="goLive.emit($event)" />
+      <app-camera-card
+        [camera]="camera"
+        [positions]="positions()"
+        (assign)="assign.emit($event)"
+        (unassign)="unassign.emit($event)"
+      />
     }
   </div>
 }

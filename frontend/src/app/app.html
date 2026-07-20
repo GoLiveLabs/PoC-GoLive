@@ -1,6 +1,6 @@
 <div class="app-shell">
   <app-control-bar
-    [systemStatus]="ws.systemStatus()"
+    [positions]="ws.positions()"
     [connectionState]="ws.connectionState()"
     (sync)="onSync()"
   />
@@ -19,6 +19,20 @@
   }
 
   <main class="app-shell__content">
-    <app-camera-grid [cameras]="ws.cameras()" (goLive)="onGoLive($event)" />
+    <app-position-admin
+      [positions]="ws.positions()"
+      [cameras]="ws.cameras()"
+      (create)="onCreatePosition($event)"
+      (rename)="onRenamePosition($event)"
+      (delete)="onDeletePosition($event)"
+      (setAudio)="onSetAudioSource($event)"
+    />
+
+    <app-camera-grid
+      [cameras]="ws.cameras()"
+      [positions]="ws.positions()"
+      (assign)="onAssignCamera($event)"
+      (unassign)="onUnassignCamera($event)"
+    />
   </main>
 </div>

@@ -6,6 +6,7 @@ import { WebSocketService } from './core/websocket.service';
 
 class FakeWebSocketService {
   cameras = signal<unknown[]>([]);
+  positions = signal<unknown[]>([]);
   systemStatus = signal<unknown>(null);
   connectionState = signal<'connecting' | 'open' | 'closed'>('closed');
   lastError = signal<string | null>(null);

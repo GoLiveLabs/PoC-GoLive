@@ -52,3 +52,21 @@
 .control-bar__sync:hover {
   background: #242424;
 }
+
+.indicator--position {
+  font-size: 0.8rem;
+}
+
+.indicator--audio-source {
+  font-weight: 700;
+  color: #f2f2f2;
+}
+
+.indicator--audio-source::before {
+  background: #f2bf5a;
+}
+
+.indicator__empty {
+  color: #666;
+  font-style: italic;
+}
