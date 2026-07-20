@@ -103,3 +103,84 @@ ajuste em relação ao especificado.
   projetos novos (seria necessário `ng add angular-eslint`, fora do escopo do plano).
   O alvo `make check` já trata isso como opcional (`ng lint || true`), conforme previsto
   no próprio plano ("`ng lint` (se configurado)").
+
+## Migração de Clients/Ingests/Streaming Platforms/Live IDs (da `livelabsapi`)
+
+Portar esses quatro domínios de uma API antiga (`livelabsapi`, multi-tenant,
+Postgres+RLS, JWT via JWKS do Supabase) para este backend. A Fase 0 da
+migração encontrou uma incompatibilidade real entre a arquitetura da origem e
+a deste repositório — não uma simples diferença de convenção — e várias
+decisões abaixo só existem por causa disso.
+
+- **Este backend não tinha banco, multi-tenancy, auth JWT, paginação nem lib
+  de validação — nada disso era "convenção a seguir", era "infraestrutura a
+  criar do zero".** Confirmado com o usuário antes de escrever qualquer
+  código (o repo é de fato o destino certo, mesmo sendo um domínio de negócio
+  completamente diferente — orquestração de câmeras/OBS vs. gestão de
+  clientes). Consequência prática: onde o prompt de migração dizia "siga o
+  padrão já existente no destino", não havia padrão a seguir para banco,
+  paginação e validação — essas escolhas foram decididas explicitamente com o
+  usuário em vez de assumidas.
+- **Multi-tenancy: tratado como single-tenant por enquanto.** A auth atual
+  (token estático único via `X-Api-Token`) não tem noção de tenant/usuário.
+  Decisão explícita do usuário: não introduzir isolamento de tenant nesta
+  primeira versão. Consequência: os checklists de "isolamento cross-tenant"
+  do prompt de origem não se aplicam aqui — não há tenant a isolar.
+- **Banco: GORM sobre Postgres**, escolha explícita do usuário (a alternativa
+  mais "no estilo minimalista" do resto do repo seria `pgx` + SQL puro, que é
+  o que a origem já usa — GORM foi escolhido mesmo assim).
+- **Schema via SQL idempotente em `internal/dbconn`, não `AutoMigrate`.**
+  `AutoMigrate` só cria FK/CHECK constraints quando os structs Go têm uma
+  associação direta entre si (ex.: `Ingest` precisaria embutir/referenciar o
+  struct `Client`), o que forçaria `internal/ingest` e `internal/liveid` a
+  importar `internal/client`/`internal/streamplatform` — exatamente o
+  acoplamento entre pacotes que o padrão "interface declarada no consumidor"
+  (já usado no resto do backend, ex. `httpapi.Orchestrator`) evita. SQL puro
+  (`CREATE TABLE IF NOT EXISTS ...`) dá controle total sobre as constraints
+  reais (unicidade composta, FK com/sem `ON DELETE`) sem essa dependência.
+- **Cuidado com GORM + `gorm:"default:..."` em campo `bool`:** um campo
+  `IsActive bool` com tag `default:true` faz o GORM omitir a coluna do
+  INSERT sempre que o valor Go for `false` (zero value), porque não há como
+  distinguir "não informado" de "informado como false" num `bool` não-ponteiro
+  — na prática isso transformava todo `IsActive: false` explícito de volta em
+  `true` (o default do banco). Descoberto por um teste (`TestList_FilterByIsActiveAndClient`)
+  que falhou mostrando os dois registros como `IsActive: true`. Corrigido
+  removendo a tag `default:` (o default de negócio já é aplicado em
+  `CreateRequest.ActiveOrDefault()`, na camada de aplicação).
+- **Paginação por cursor opaco, replicando o comportamento observável exato
+  da origem** (`(created_at, id)` DESC, base64), decisão explícita do
+  usuário — a alternativa seria offset/limit, mais simples mas instável sob
+  escrita concorrente. Implementado em `internal/pagination`, package novo
+  (não havia nenhuma paginação prévia no backend).
+- **Validação manual, sem introduzir `go-playground/validator`.** O prompt de
+  migração pede explicitamente para não importar as ferramentas da origem só
+  por serem as da origem, e cita esse validator nominalmente como exemplo.
+  Como o destino já não decodifica nenhum body JSON hoje (nenhum endpoint
+  antigo aceita payload), as regras de tamanho/formato (nome ≤200, e-mail
+  ≤320 + formato, URL ≤2048, slug ≤100, liveId ≤255) foram implementadas nos
+  construtores de domínio (`client.New`, `ingest.New`, etc.), no mesmo lugar
+  onde já vivia a validação de negócio (nome não-vazio, protocolo derivado
+  da URL).
+- **Testes de serviço usam Postgres real via testcontainers-go**
+  (`internal/testdb`), não mocks — mesma filosofia de teste da origem
+  (constraints de unicidade, FK e checks só significam algo testados contra
+  um banco real). É a única exceção ao "não copiar ferramenta da origem":
+  aqui a justificativa é técnica (correção do teste), não conveniência.
+  Descoberta de ambiente: o módulo `testcontainers-go/modules/postgres`
+  v0.43.0 não aplica nenhuma estratégia de espera por padrão — sem
+  `postgres.BasicWaitStrategies()`, a conexão falhava com `unexpected EOF`
+  porque o container "pronto" (porta escutando) ainda não tinha terminado o
+  restart interno do Postgres. É um problema conhecido do próprio módulo
+  (documentado no comentário de `BasicWaitStrategies`), mais frequente em
+  Windows/Mac por causa do proxy do Docker Desktop.
+- **Rotas montadas sob o prefixo `/api/v1` já existente** (não `/v1` como na
+  origem), para ficar consistente com as rotas de câmeras já expostas neste
+  backend. Paths (`/clients`, `/clients/{clientID}/ingests`, etc.) e nomes de
+  campo em JSON (camelCase) preservados exatamente como na origem — é o
+  contrato observável que este trabalho existe para migrar.
+- **Erro HTTP: formato simples existente estendido, não RFC 7807.** O
+  backend já respondia erros como `{"error": "mensagem"}`
+  (`internal/httpapi/httpapi.go`). Em vez de importar RFC 7807 da origem,
+  esse formato foi só estendido com um campo `errors` (mapa campo→mensagem)
+  exclusivo de respostas 422, preservando compatibilidade com o formato já
+  usado pelas rotas de câmera.

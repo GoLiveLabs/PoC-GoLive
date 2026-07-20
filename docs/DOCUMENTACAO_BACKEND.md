@@ -111,6 +111,35 @@ Lê as configurações de variáveis de ambiente.
 
 **Arquivo:** `config/config.go`
 
+### **7. Gestão de Clients, Ingests, Streaming Platforms e Live IDs**
+
+Ao lado do orquestrador de câmeras (que não guarda nada em disco), o backend
+também expõe uma API de gestão para quatro cadastros que **são persistidos em
+Postgres**: clientes finais do operador, fontes de ingestão de mídia desses
+clientes, o catálogo de plataformas de streaming (YouTube, Twitch, ...) e os
+ids de transmissão associando um client a uma plataforma.
+
+Diferente do orquestrador, esses dados sobrevivem a um restart do backend.
+Cada um vive em seu próprio pacote, seguindo o mesmo padrão de "pacote por
+responsabilidade" do resto do backend:
+
+- `internal/client` — clientes (nome + e-mail opcional), soft delete.
+- `internal/ingest` — fontes de ingestão de um client; o protocolo
+  (`http`/`https`/`ftp`/`sftp`/`s3`) é sempre derivado da própria URL, nunca
+  aceito como campo separado. URLs com credenciais embutidas são rejeitadas.
+- `internal/streamplatform` — catálogo global de plataformas de streaming,
+  compartilhado (não há conceito de tenant nesta API hoje).
+- `internal/liveid` — associação entre um client e um id de transmissão numa
+  plataforma; um client pode ter vários live ids na mesma plataforma.
+- `internal/pagination` — paginação por cursor opaco (base64 sobre
+  `created_at`+`id`), usada por todas as listagens acima.
+- `internal/dbconn` — conexão com Postgres via GORM e criação do schema
+  (SQL simples e idempotente, não `AutoMigrate` — ver comentário no arquivo).
+
+Essas rotas passam pela mesma autenticação por `X-Api-Token` do resto da API.
+Não há isolamento multi-tenant nesta primeira versão: todo client, ingest,
+platform e live id é visível a qualquer requisição autenticada.
+
 ## Os dados que o backend trabalha
 
 ### **Câmera**
@@ -163,6 +192,31 @@ O estado geral da aplicação:
 ### WebSocket `/api/v1/ws`
 Conexão em tempo real para receber atualizações automáticas
 
+### Gestão de Clients / Ingests / Streaming Platforms / Live IDs
+
+Estas rotas usam paginação por cursor (`?limit=&cursor=`, resposta
+`{data, nextCursor, hasMore}`) e retornam `422` com um mapa `errors` em
+falhas de validação de campo.
+
+| Método | Rota | Sucesso | Observação |
+|---|---|---|---|
+| POST | `/api/v1/clients` | 201 | nome duplicado → 409 |
+| GET | `/api/v1/clients` | 200 | só clients não deletados |
+| GET | `/api/v1/clients/{id}` | 200 | |
+| PATCH | `/api/v1/clients/{id}` | 200 | `email` ausente = não mexe; `null` = limpa |
+| DELETE | `/api/v1/clients/{id}` | 204 | soft delete |
+| POST | `/api/v1/clients/{clientID}/ingests` | 201 | protocolo derivado da URL |
+| GET | `/api/v1/clients/{clientID}/ingests` | 200 | filtros `isActive`, paginação |
+| GET | `/api/v1/ingests` | 200 | filtros `clientId`, `isActive` |
+| GET,PATCH,DELETE | `/api/v1/ingests/{id}` | 200/200/204 | DELETE é hard delete |
+| POST | `/api/v1/streaming-platforms` | 201 | catálogo global; slug duplicado → 409 |
+| GET | `/api/v1/streaming-platforms` | 200 | |
+| GET,PATCH,DELETE | `/api/v1/streaming-platforms/{id}` | 200/200/204 | DELETE falha 409 se houver live id em uso |
+| POST | `/api/v1/clients/{clientID}/live-ids` | 201 | client e platform checados na mesma transação |
+| GET | `/api/v1/clients/{clientID}/live-ids` | 200 | filtros `platformId`, `isActive` |
+| GET | `/api/v1/live-ids` | 200 | filtros `clientId`, `platformId`, `isActive` |
+| GET,PATCH,DELETE | `/api/v1/live-ids/{id}` | 200/200/204 | `platformId`/`clientId` não são editáveis
+
 ## Como o backend se reconecta?
 
 ### Conexão com OBS
@@ -193,9 +247,11 @@ X-Api-Token: dev-token
 
 Se não tiver, o servidor rejeita.
 
-### **Nenhum dado é salvo**
+### **O estado das câmeras não é salvo — os cadastros de gestão, sim**
 
-Quando você desliga o backend, tudo que ele sabia é perdido. Na próxima vez que ligar, começa do zero. Isso é proposital — é um "prototipo".
+Quando você desliga o backend, tudo que o orquestrador sabia sobre câmeras é perdido: na próxima vez que ligar, ele descobre tudo de novo a partir do MediaMTX. Isso é proposital.
+
+Já os clients, ingests, streaming platforms e live ids (seção acima) **são salvos em Postgres** e sobrevivem a um restart — são cadastros de gestão, não estado descartável do orquestrador.
 
 ### **Graceful shutdown (Encerramento limpo)**
 
@@ -223,6 +279,7 @@ Você pode customizar o comportamento mudando essas variáveis:
 | `SYNC_INTERVAL` | `3s` | Frequência de sincronização |
 | `PROGRAM_SCENE` | `Program` | Nome da cena no OBS |
 | `LOG_LEVEL` | `info` | Verbosidade dos logs (debug/info/warn/error) |
+| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5433/live_orchestrator?sslmode=disable` | Conexão Postgres usada por clients/ingests/streaming-platforms/live-ids (porta 5433 no host para não colidir com outro Postgres local na 5432) |
 
 ## Fluxo completo: do início ao fim
 

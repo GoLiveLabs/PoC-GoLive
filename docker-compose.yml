@@ -8,3 +8,17 @@ services:
       - "9997:9997"     # API HTTP
     volumes:
       - ./mediamtx.yml:/mediamtx.yml:ro
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: live_orchestrator
+    ports:
+      - "5433:5432" # host 5433: 5432 is often already taken by another local Postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:

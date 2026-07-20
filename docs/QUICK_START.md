@@ -21,11 +21,13 @@ Se não, volta em `docs/GUIA_USO.md` para instruções de instalação.
 
 ## Começar (5 terminais abertos em paralelo)
 
-### Terminal 1: MediaMTX (servidor de vídeo)
+### Terminal 1: MediaMTX (servidor de vídeo) + Postgres
 ```bash
 make mediamtx-up
 ```
-Espera por: `listening on :1935`
+Espera por: `listening on :1935` (sobe também o Postgres usado pelos
+cadastros de clients/ingests/streaming-platforms/live-ids — o backend não
+inicia sem ele)
 
 ### Terminal 2: Câmera Fake 1
 ```bash

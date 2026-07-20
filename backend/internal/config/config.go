@@ -17,6 +17,7 @@ type Config struct {
 	SyncInterval       time.Duration
 	ProgramScene       string
 	LogLevel           string
+	DatabaseURL        string
 }
 
 // Load reads configuration from environment variables, applying defaults for
@@ -32,6 +33,7 @@ func Load() Config {
 		SyncInterval:       getEnvDuration("SYNC_INTERVAL", 3*time.Second),
 		ProgramScene:       getEnv("PROGRAM_SCENE", "Program"),
 		LogLevel:           getEnv("LOG_LEVEL", "info"),
+		DatabaseURL:        getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/live_orchestrator?sslmode=disable"),
 	}
 }
 
