@@ -53,6 +53,27 @@
   font-size: 0.85rem;
 }
 
+.camera-card__preview-btn {
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.5rem;
+  border: 1px solid #b8860b;
+  background: #3a2f0a;
+  color: #ffd966;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.camera-card__preview-btn:hover:not(:disabled) {
+  background: #4a3c0d;
+}
+
+.camera-card__preview-btn:disabled {
+  background: #262626;
+  color: #777;
+  border-color: #3a3a3a;
+  cursor: not-allowed;
+}
+
 .camera-card__assignment {
   display: flex;
   flex-direction: column;

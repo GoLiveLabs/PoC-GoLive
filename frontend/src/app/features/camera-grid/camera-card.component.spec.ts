@@ -111,6 +111,50 @@ describe('CameraCardComponent', () => {
     });
   });
 
+  describe('preview action', () => {
+    it('emits a preview-selection with the camera id when the preview button is clicked', () => {
+      fixture.componentRef.setInput('camera', makeCamera({ id: 'camera3', status: 'online' }));
+      fixture.componentRef.setInput('positions', makePositions());
+      fixture.detectChanges();
+
+      let previewed: string | undefined;
+      fixture.componentInstance.preview.subscribe((id: string) => (previewed = id));
+
+      const btn = fixture.nativeElement.querySelector('.camera-card__preview-btn') as HTMLButtonElement;
+      btn.click();
+
+      expect(previewed).toBe('camera3');
+    });
+
+    it('does not emit assign when previewing (preview is not a direct-live/assignment action)', () => {
+      fixture.componentRef.setInput('camera', makeCamera({ id: 'camera3', status: 'online' }));
+      fixture.componentRef.setInput('positions', makePositions());
+      fixture.detectChanges();
+
+      let assigned: unknown;
+      fixture.componentInstance.assign.subscribe((e: unknown) => (assigned = e));
+
+      const btn = fixture.nativeElement.querySelector('.camera-card__preview-btn') as HTMLButtonElement;
+      btn.click();
+
+      expect(assigned).toBeUndefined();
+    });
+
+    it('disables the preview button and does not emit when the camera is offline', () => {
+      fixture.componentRef.setInput('camera', makeCamera({ status: 'offline' }));
+      fixture.componentRef.setInput('positions', makePositions());
+      fixture.detectChanges();
+
+      let previewed: unknown;
+      fixture.componentInstance.preview.subscribe((id: unknown) => (previewed = id));
+
+      const btn = fixture.nativeElement.querySelector('.camera-card__preview-btn') as HTMLButtonElement;
+      expect(btn.disabled).toBe(true);
+      fixture.componentInstance.onPreview();
+      expect(previewed).toBeUndefined();
+    });
+  });
+
   describe('offline camera', () => {
     it('disables the select when camera is offline', () => {
       fixture.componentRef.setInput('camera', makeCamera({ status: 'offline' }));

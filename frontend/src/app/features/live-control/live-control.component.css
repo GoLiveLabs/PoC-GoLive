@@ -1,0 +1,149 @@
+.live-control {
+  padding: 1rem;
+  background: #161616;
+  border-radius: 0.75rem;
+  border: 2px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.live-control__status {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.live-control__indicator {
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  color: #f2f2f2;
+  border: 1px solid #2a2a2a;
+}
+
+.live-control__indicator--onair {
+  background: #2a0d0d;
+  border-color: #b3231f;
+}
+
+.live-control__indicator--onair strong {
+  color: #ff6b6b;
+}
+
+.live-control__indicator--preview {
+  background: #2a2410;
+  border-color: #b8860b;
+}
+
+.live-control__indicator--preview strong {
+  color: #ffd966;
+}
+
+.live-control__cut {
+  margin-left: auto;
+  padding: 0.55rem 1.4rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5484d;
+  background: #b3231f;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.live-control__cut:hover:not(:disabled) {
+  background: #c92a26;
+}
+
+.live-control__cut:disabled {
+  background: #3a2020;
+  border-color: #5a3030;
+  color: #997777;
+  cursor: not-allowed;
+}
+
+.live-control__buses {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.live-control__bus {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.live-control__bus-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ccc;
+  margin: 0;
+}
+
+.live-control__empty {
+  color: #666;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.live-control__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.live-control__option {
+  padding: 0.5rem 0.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid #3a3a3a;
+  background: #1c1c1c;
+  color: #f2f2f2;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.live-control__option:hover:not(:disabled) {
+  background: #262626;
+}
+
+.live-control__option:disabled {
+  color: #777;
+  cursor: not-allowed;
+}
+
+.live-control__option--live {
+  border-color: #b3231f;
+  background: #2a0d0d;
+}
+
+.live-control__option--preview {
+  border-color: #b8860b;
+  background: #2a2410;
+}
+
+.badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge--live {
+  background: #b3231f;
+  color: #fff;
+}
+
+.badge--preview {
+  background: #3a2f0a;
+  color: #ffd966;
+  border: 1px solid #b8860b;
+}

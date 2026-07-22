@@ -1,0 +1,112 @@
+<section class="scene-admin">
+  <div class="scene-admin__header">
+    <h2 class="scene-admin__title">Cenas</h2>
+  </div>
+
+  @if (scenes().length === 0) {
+    <div class="scene-admin__empty">
+      <p>Nenhuma cena cadastrada.</p>
+      <p>Crie uma cena para combinar múltiplas posições em um arranjo nomeado.</p>
+    </div>
+  } @else {
+    <ul class="scene-admin__list">
+      @for (scene of scenes(); track scene.id) {
+        <li class="scene-admin__item">
+          @if (editingId() === scene.id) {
+            <form class="scene-admin__rename-form" (submit)="$event.preventDefault(); onRenameSubmit()">
+              <input
+                type="text"
+                class="scene-admin__input"
+                [value]="editingName()"
+                (input)="editingName.set($any($event.target).value)"
+                autofocus
+              />
+              <button type="submit" class="btn btn--confirm">Salvar</button>
+              <button type="button" class="btn btn--cancel" (click)="cancelRename()">Cancelar</button>
+            </form>
+          } @else if (editingPositionsId() === scene.id) {
+            <form class="scene-admin__positions-form" (submit)="$event.preventDefault(); onEditPositionsSubmit()">
+              <span class="scene-admin__name">{{ scene.name }}</span>
+              <div class="scene-admin__positions-picker">
+                @for (position of positions(); track position.id) {
+                  <label class="scene-admin__position-option">
+                    <input
+                      type="checkbox"
+                      [checked]="editingPositionIds().includes(position.id)"
+                      (change)="toggleEditPosition(position.id, $any($event.target).checked)"
+                    />
+                    {{ position.name }}
+                  </label>
+                }
+              </div>
+              <button type="submit" class="btn btn--confirm">Salvar posições</button>
+              <button type="button" class="btn btn--cancel" (click)="cancelEditPositions()">Cancelar</button>
+            </form>
+          } @else {
+            <span class="scene-admin__name">
+              {{ scene.name }}
+              @if (isLive(scene)) {
+                <span class="badge badge--live" title="Ao vivo agora">ao vivo</span>
+              }
+              @if (isPreview(scene)) {
+                <span class="badge badge--preview" title="Em prévia">em prévia</span>
+              }
+            </span>
+            <span class="scene-admin__positions">
+              @if (scene.positionIds.length === 0) {
+                <span class="scene-admin__empty-indicator">sem posições</span>
+              } @else {
+                {{ scene.positionIds.length }} posição(ões)
+              }
+            </span>
+            <div class="scene-admin__actions">
+              <button
+                type="button"
+                class="btn btn--positions"
+                title="Editar posições"
+                (click)="startEditPositions(scene)"
+              >
+                🎛️
+              </button>
+              <button type="button" class="btn btn--rename" title="Renomear" (click)="startRename(scene)">
+                ✏️
+              </button>
+              <button type="button" class="btn btn--delete" title="Excluir" (click)="onDelete(scene.id)">
+                🗑️
+              </button>
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  <form class="scene-admin__create-form" (submit)="$event.preventDefault(); onCreateSubmit()">
+    <input
+      type="text"
+      class="scene-admin__input"
+      placeholder="Nome da nova cena"
+      [value]="newName()"
+      (input)="newName.set($any($event.target).value); validationError.set(null)"
+    />
+    @if (positions().length > 0) {
+      <div class="scene-admin__positions-picker">
+        @for (position of positions(); track position.id) {
+          <label class="scene-admin__position-option">
+            <input
+              type="checkbox"
+              [checked]="newPositionIds().includes(position.id)"
+              (change)="toggleNewPosition(position.id, $any($event.target).checked)"
+            />
+            {{ position.name }}
+          </label>
+        }
+      </div>
+    }
+    <button type="submit" class="btn btn--create">Criar cena</button>
+  </form>
+
+  @if (validationError()) {
+    <p class="scene-admin__error">{{ validationError() }}</p>
+  }
+</section>

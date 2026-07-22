@@ -1,5 +1,5 @@
 import { WebSocketService } from './websocket.service';
-import { Camera, Position, SystemStatus } from './models';
+import { BroadcastStatus, Camera, LiveState, Position, Scene, SystemStatus } from './models';
 
 describe('WebSocketService', () => {
   let service: WebSocketService;
@@ -37,6 +37,44 @@ describe('WebSocketService', () => {
     service.handleMessage(JSON.stringify({ type: 'positions.updated', payload: positions }));
 
     expect(service.positions()).toEqual(positions);
+  });
+
+  it('starts with empty scenes and null live/broadcast state', () => {
+    expect(service.scenes()).toEqual([]);
+    expect(service.liveState()).toBeNull();
+    expect(service.broadcastStatus()).toBeNull();
+  });
+
+  it('applies a scenes.updated event to the scenes signal', () => {
+    const scenes: Scene[] = [{ id: 'scene1', name: 'Cena 1', positionIds: ['pos1', 'pos2'] }];
+    service.handleMessage(JSON.stringify({ type: 'scenes.updated', payload: scenes }));
+
+    expect(service.scenes()).toEqual(scenes);
+  });
+
+  it('applies a live.updated event to the liveState signal', () => {
+    const live: LiveState = {
+      previewKind: 'camera',
+      previewId: 'camera1',
+      liveKind: 'scene',
+      liveId: 'scene1',
+    };
+    service.handleMessage(JSON.stringify({ type: 'live.updated', payload: live }));
+
+    expect(service.liveState()).toEqual(live);
+  });
+
+  it('applies a broadcast.status event to the broadcastStatus signal', () => {
+    const status: BroadcastStatus = {
+      activeClientId: 'client1',
+      running: true,
+      destinations: [
+        { liveId: 'live1', platformName: 'YouTube', state: 'connected', lastError: '' },
+      ],
+    };
+    service.handleMessage(JSON.stringify({ type: 'broadcast.status', payload: status }));
+
+    expect(service.broadcastStatus()).toEqual(status);
   });
 
   it('applies a system.status event to the systemStatus signal', () => {

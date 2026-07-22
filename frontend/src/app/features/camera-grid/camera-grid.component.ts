@@ -15,4 +15,5 @@ export class CameraGridComponent {
 
   assign = output<{ positionId: string; cameraId: string }>();
   unassign = output<string>();
+  preview = output<string>();
 }

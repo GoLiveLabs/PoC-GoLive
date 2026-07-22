@@ -15,6 +15,7 @@ export class CameraCardComponent {
 
   assign = output<{ positionId: string; cameraId: string }>();
   unassign = output<string>();
+  preview = output<string>();
 
   readonly noneOption = NONE_OPTION;
 
@@ -35,5 +36,12 @@ export class CameraCardComponent {
       return;
     }
     this.assign.emit({ positionId, cameraId: this.camera().id });
+  }
+
+  onPreview(): void {
+    if (this.camera().status === 'offline') {
+      return;
+    }
+    this.preview.emit(this.camera().id);
   }
 }

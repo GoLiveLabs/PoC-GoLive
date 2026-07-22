@@ -246,7 +246,9 @@ func (m *Manager) RestartDestination(ctx context.Context, liveID uuid.UUID) erro
 	}
 	rt.gen++
 	gen := rt.gen
-	proc, err := m.runner.Start(ctx, m.programStreamURL, rt.dest.PushURL)
+	// Detach from the caller's context: the respawned relay is owned by the
+	// Manager, not the request that triggered the restart (see spawnLocked).
+	proc, err := m.runner.Start(context.WithoutCancel(ctx), m.programStreamURL, rt.dest.PushURL)
 	if err != nil {
 		rt.status.State = StateFailed
 		rt.status.LastError = err.Error()
@@ -263,7 +265,11 @@ func (m *Manager) RestartDestination(ctx context.Context, liveID uuid.UUID) erro
 }
 
 func (m *Manager) spawnLocked(ctx context.Context, d Destination) error {
-	proc, err := m.runner.Start(ctx, m.programStreamURL, d.PushURL)
+	// The relay process must outlive the caller's context (e.g. an HTTP request
+	// that returns immediately after Start). Its lifetime is owned by the
+	// Manager and ended only by Kill on Stop/RestartDestination/shutdown, so we
+	// detach cancellation here to keep any context values but drop the deadline.
+	proc, err := m.runner.Start(context.WithoutCancel(ctx), m.programStreamURL, d.PushURL)
 	if err != nil {
 		return err
 	}

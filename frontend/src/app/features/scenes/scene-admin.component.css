@@ -1,0 +1,190 @@
+.scene-admin {
+  padding: 1rem;
+  background: #161616;
+  border-radius: 0.75rem;
+  border: 2px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.scene-admin__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.scene-admin__title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #f2f2f2;
+  margin: 0;
+}
+
+.scene-admin__empty {
+  text-align: center;
+  padding: 2rem;
+  color: #888;
+}
+
+.scene-admin__empty p {
+  margin: 0.3rem 0;
+}
+
+.scene-admin__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.scene-admin__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: #1c1c1c;
+  border-radius: 0.5rem;
+  border: 1px solid #2a2a2a;
+  flex-wrap: wrap;
+}
+
+.scene-admin__name {
+  font-weight: 600;
+  color: #f2f2f2;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.scene-admin__positions {
+  color: #aaa;
+  font-size: 0.9rem;
+  min-width: 120px;
+}
+
+.scene-admin__empty-indicator {
+  color: #666;
+  font-style: italic;
+}
+
+.scene-admin__actions {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.scene-admin__rename-form,
+.scene-admin__positions-form {
+  display: flex;
+  gap: 0.4rem;
+  flex: 1;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.scene-admin__create-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding-top: 0.5rem;
+  border-top: 1px solid #2a2a2a;
+  flex-wrap: wrap;
+}
+
+.scene-admin__positions-picker {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.scene-admin__position-option {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #ccc;
+  font-size: 0.85rem;
+}
+
+.scene-admin__input {
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid #3a3a3a;
+  background: #101010;
+  color: #f2f2f2;
+  font-weight: 600;
+  flex: 1;
+}
+
+.scene-admin__error {
+  color: #ffb3b3;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge--live {
+  background: #b3231f;
+  color: #fff;
+}
+
+.badge--preview {
+  background: #3a2f0a;
+  color: #ffd966;
+  border: 1px solid #b8860b;
+}
+
+.btn {
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.4rem;
+  border: 1px solid #3a3a3a;
+  background: transparent;
+  color: #f2f2f2;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.btn--create {
+  background: #1f6f3d;
+  border-color: #2fbf5a;
+}
+
+.btn--create:hover {
+  background: #2a8a4d;
+}
+
+.btn--rename,
+.btn--delete,
+.btn--positions {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+}
+
+.btn--delete:hover {
+  background: #3d1f1f;
+  border-color: #e5484d;
+}
+
+.btn--confirm {
+  background: #1f6f3d;
+  border-color: #2fbf5a;
+}
+
+.btn--cancel {
+  color: #aaa;
+}
+
+.btn--cancel:hover {
+  background: #242424;
+}

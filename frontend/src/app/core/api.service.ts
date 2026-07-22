@@ -2,7 +2,17 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Camera, Position, SystemStatus } from './models';
+import {
+  BroadcastStatus,
+  Camera,
+  Client,
+  LiveKind,
+  LiveState,
+  Page,
+  Position,
+  Scene,
+  SystemStatus,
+} from './models';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -47,5 +57,60 @@ export class ApiService {
 
   setAudioPosition(positionId: string): Observable<Position> {
     return this.http.post<Position>(`${this.baseUrl}/positions/${positionId}/audio`, {});
+  }
+
+  listScenes(): Observable<Scene[]> {
+    return this.http.get<Scene[]>(`${this.baseUrl}/scenes`);
+  }
+
+  createScene(name: string, positionIds: string[]): Observable<Scene> {
+    return this.http.post<Scene>(`${this.baseUrl}/scenes`, { name, positionIds });
+  }
+
+  updateScene(id: string, changes: { name?: string; positionIds?: string[] }): Observable<Scene> {
+    return this.http.patch<Scene>(`${this.baseUrl}/scenes/${id}`, changes);
+  }
+
+  deleteScene(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/scenes/${id}`);
+  }
+
+  getLive(): Observable<LiveState> {
+    return this.http.get<LiveState>(`${this.baseUrl}/live`);
+  }
+
+  setPreview(kind: LiveKind, id: string): Observable<LiveState> {
+    return this.http.post<LiveState>(`${this.baseUrl}/live/preview`, { kind, id });
+  }
+
+  cut(): Observable<LiveState> {
+    return this.http.post<LiveState>(`${this.baseUrl}/live/cut`, {});
+  }
+
+  getBroadcast(): Observable<BroadcastStatus> {
+    return this.http.get<BroadcastStatus>(`${this.baseUrl}/broadcast`);
+  }
+
+  setActiveClient(clientId: string): Observable<BroadcastStatus> {
+    return this.http.post<BroadcastStatus>(`${this.baseUrl}/broadcast/client`, { clientId });
+  }
+
+  startBroadcast(): Observable<BroadcastStatus> {
+    return this.http.post<BroadcastStatus>(`${this.baseUrl}/broadcast/start`, {});
+  }
+
+  stopBroadcast(): Observable<BroadcastStatus> {
+    return this.http.post<BroadcastStatus>(`${this.baseUrl}/broadcast/stop`, {});
+  }
+
+  restartDestination(liveId: string): Observable<BroadcastStatus> {
+    return this.http.post<BroadcastStatus>(
+      `${this.baseUrl}/broadcast/destinations/${liveId}/restart`,
+      {},
+    );
+  }
+
+  listClients(): Observable<Page<Client>> {
+    return this.http.get<Page<Client>>(`${this.baseUrl}/clients`);
   }
 }

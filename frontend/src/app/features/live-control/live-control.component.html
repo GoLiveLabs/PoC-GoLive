@@ -1,0 +1,73 @@
+<section class="live-control">
+  <div class="live-control__status">
+    <span class="live-control__indicator live-control__indicator--onair">
+      Ao vivo agora: <strong>{{ onAirLabel() }}</strong>
+    </span>
+    <span class="live-control__indicator live-control__indicator--preview">
+      Em prévia: <strong>{{ previewLabel() }}</strong>
+    </span>
+    <button
+      type="button"
+      class="live-control__cut"
+      [disabled]="!hasPreview()"
+      (click)="onCut()"
+    >
+      Cortar
+    </button>
+  </div>
+
+  <div class="live-control__buses">
+    <div class="live-control__bus">
+      <h3 class="live-control__bus-title">Câmeras</h3>
+      @if (cameras().length === 0) {
+        <p class="live-control__empty">Nenhuma câmera disponível.</p>
+      } @else {
+        <div class="live-control__options">
+          @for (camera of cameras(); track camera.id) {
+            <button
+              type="button"
+              class="live-control__option"
+              [class.live-control__option--live]="isLive('camera', camera.id)"
+              [class.live-control__option--preview]="isPreview('camera', camera.id)"
+              [disabled]="camera.status === 'offline'"
+              (click)="selectCameraPreview(camera.id)"
+            >
+              {{ camera.name }}
+              @if (isLive('camera', camera.id)) {
+                <span class="badge badge--live">ao vivo</span>
+              } @else if (isPreview('camera', camera.id)) {
+                <span class="badge badge--preview">prévia</span>
+              }
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="live-control__bus">
+      <h3 class="live-control__bus-title">Cenas</h3>
+      @if (scenes().length === 0) {
+        <p class="live-control__empty">Nenhuma cena cadastrada.</p>
+      } @else {
+        <div class="live-control__options">
+          @for (scene of scenes(); track scene.id) {
+            <button
+              type="button"
+              class="live-control__option"
+              [class.live-control__option--live]="isLive('scene', scene.id)"
+              [class.live-control__option--preview]="isPreview('scene', scene.id)"
+              (click)="selectScenePreview(scene.id)"
+            >
+              {{ scene.name }}
+              @if (isLive('scene', scene.id)) {
+                <span class="badge badge--live">ao vivo</span>
+              } @else if (isPreview('scene', scene.id)) {
+                <span class="badge badge--preview">prévia</span>
+              }
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</section>

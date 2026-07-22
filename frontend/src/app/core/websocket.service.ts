@@ -1,6 +1,16 @@
 import { Injectable, signal } from '@angular/core';
 import { environment } from '../../environments/environment';
-import { Camera, ConnectionState, ErrorPayload, Position, SystemStatus, WsEnvelope } from './models';
+import {
+  BroadcastStatus,
+  Camera,
+  ConnectionState,
+  ErrorPayload,
+  LiveState,
+  Position,
+  Scene,
+  SystemStatus,
+  WsEnvelope,
+} from './models';
 
 const INITIAL_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30000;
@@ -9,6 +19,9 @@ const MAX_RECONNECT_DELAY_MS = 30000;
 export class WebSocketService {
   readonly cameras = signal<Camera[]>([]);
   readonly positions = signal<Position[]>([]);
+  readonly scenes = signal<Scene[]>([]);
+  readonly liveState = signal<LiveState | null>(null);
+  readonly broadcastStatus = signal<BroadcastStatus | null>(null);
   readonly systemStatus = signal<SystemStatus | null>(null);
   readonly connectionState = signal<ConnectionState>('connecting');
   readonly lastError = signal<string | null>(null);
@@ -77,6 +90,15 @@ export class WebSocketService {
         break;
       case 'positions.updated':
         this.positions.set(envelope.payload as Position[]);
+        break;
+      case 'scenes.updated':
+        this.scenes.set(envelope.payload as Scene[]);
+        break;
+      case 'live.updated':
+        this.liveState.set(envelope.payload as LiveState);
+        break;
+      case 'broadcast.status':
+        this.broadcastStatus.set(envelope.payload as BroadcastStatus);
         break;
       case 'system.status':
         this.systemStatus.set(envelope.payload as SystemStatus);

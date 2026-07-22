@@ -19,6 +19,34 @@
   }
 
   <main class="app-shell__content">
+    <app-live-control
+      [cameras]="ws.cameras()"
+      [scenes]="ws.scenes()"
+      [liveState]="ws.liveState()"
+      (previewSelect)="onPreviewSelect($event)"
+      (cut)="onCut()"
+    />
+
+    <app-broadcast
+      [clients]="clients()"
+      [status]="ws.broadcastStatus()"
+      [onAir]="(ws.liveState()?.liveKind ?? '') !== ''"
+      (setActiveClient)="onSetActiveClient($event)"
+      (start)="onStartBroadcast()"
+      (stop)="onStopBroadcast()"
+      (restart)="onRestartDestination($event)"
+    />
+
+    <app-scene-admin
+      [scenes]="ws.scenes()"
+      [positions]="ws.positions()"
+      [liveState]="ws.liveState()"
+      (create)="onCreateScene($event)"
+      (rename)="onRenameScene($event)"
+      (updatePositions)="onUpdateScenePositions($event)"
+      (delete)="onDeleteScene($event)"
+    />
+
     <app-position-admin
       [positions]="ws.positions()"
       [cameras]="ws.cameras()"
@@ -33,6 +61,7 @@
       [positions]="ws.positions()"
       (assign)="onAssignCamera($event)"
       (unassign)="onUnassignCamera($event)"
+      (preview)="onPreviewCamera($event)"
     />
   </main>
 </div>

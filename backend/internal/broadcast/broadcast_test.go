@@ -76,14 +76,16 @@ type startCall struct {
 type fakeRunner struct {
 	mu       sync.Mutex
 	calls    []startCall
+	ctxs     []context.Context
 	queue    []*fakeProcess
 	startErr error
 }
 
-func (r *fakeRunner) Start(_ context.Context, sourceURL, pushURL string) (Process, error) {
+func (r *fakeRunner) Start(ctx context.Context, sourceURL, pushURL string) (Process, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.calls = append(r.calls, startCall{sourceURL: sourceURL, pushURL: pushURL})
+	r.ctxs = append(r.ctxs, ctx)
 	if r.startErr != nil {
 		return nil, r.startErr
 	}
@@ -106,6 +108,15 @@ func (r *fakeRunner) callCount() int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return len(r.calls)
+}
+
+func (r *fakeRunner) lastCtx() context.Context {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.ctxs) == 0 {
+		return nil
+	}
+	return r.ctxs[len(r.ctxs)-1]
 }
 
 func (r *fakeRunner) pushURLs() []string {
@@ -500,6 +511,32 @@ func TestAllProcessesExit_NoAutoStop(t *testing.T) {
 	}
 	if obsCtl.StopProgramStreamCalls != 0 {
 		t.Fatalf("should not stop OBS stream")
+	}
+}
+
+// Regression: spawned relay processes must be detached from the caller's
+// context (e.g. an HTTP request that returns right after Start), so a real
+// exec.CommandContext process is not killed when the request context is
+// cancelled. Teardown happens only via Kill on Stop/Restart/shutdown.
+func TestStart_ProcessDetachedFromCallerContext(t *testing.T) {
+	clientA := uuid.New()
+	dests := testDests(clientA, 1)
+	m, runner, _, _ := newTestManager(t, clientA, dests, true)
+	_ = m.SetActiveClient(context.Background(), clientA)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	if err := m.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	procCtx := runner.lastCtx()
+	if procCtx == nil {
+		t.Fatal("runner never called")
+	}
+	cancel() // caller's context is done once its work returns
+	select {
+	case <-procCtx.Done():
+		t.Fatal("process context cancelled when caller context was cancelled")
+	default:
 	}
 }
 

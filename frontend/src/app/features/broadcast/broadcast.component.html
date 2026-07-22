@@ -1,0 +1,85 @@
+<section class="broadcast">
+  <div class="broadcast__header">
+    <h2 class="broadcast__title">Transmissão</h2>
+    <span
+      class="broadcast__state"
+      [class.broadcast__state--running]="running()"
+      [class.broadcast__state--stopped]="!running()"
+    >
+      {{ running() ? 'Transmitindo' : 'Parada' }}
+    </span>
+  </div>
+
+  <label class="broadcast__client">
+    Cliente ativo
+    <select
+      class="broadcast__select"
+      [value]="activeClientId()"
+      [disabled]="running()"
+      (change)="onClientChange($any($event.target).value)"
+    >
+      <option value="">Selecione um cliente</option>
+      @for (client of clients(); track client.id) {
+        <option [value]="client.id">{{ client.name }}</option>
+      }
+    </select>
+  </label>
+
+  <div class="broadcast__actions">
+    <button
+      type="button"
+      class="btn btn--start"
+      [disabled]="!canStart()"
+      (click)="onStart()"
+    >
+      Iniciar transmissão
+    </button>
+    <button
+      type="button"
+      class="btn btn--stop"
+      [disabled]="!running()"
+      (click)="onStop()"
+    >
+      Parar transmissão
+    </button>
+  </div>
+
+  @if (!onAir() && !running()) {
+    <p class="broadcast__hint">Coloque algo ao vivo (corte) antes de iniciar a transmissão.</p>
+  }
+
+  <div class="broadcast__destinations">
+    <h3 class="broadcast__destinations-title">Destinos</h3>
+    @if (destinations().length === 0) {
+      <p class="broadcast__empty">Nenhum destino ativo.</p>
+    } @else {
+      <ul class="broadcast__destination-list">
+        @for (destination of destinations(); track destination.liveId) {
+          <li class="broadcast__destination">
+            <span class="broadcast__destination-name">{{ destination.platformName }}</span>
+            <span
+              class="broadcast__destination-state"
+              [class.broadcast__destination-state--connected]="destination.state === 'connected'"
+              [class.broadcast__destination-state--failed]="destination.state === 'failed'"
+              [class.broadcast__destination-state--stopped]="destination.state === 'stopped'"
+            >
+              {{ destination.state }}
+            </span>
+            @if (destination.state === 'failed') {
+              @if (destination.lastError) {
+                <span class="broadcast__destination-error">{{ destination.lastError }}</span>
+              }
+              <button
+                type="button"
+                class="btn btn--restart"
+                (click)="onRestart(destination.liveId)"
+              >
+                Reiniciar
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>
