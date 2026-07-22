@@ -27,11 +27,12 @@ var (
 
 // Platform is a row in the streaming platform catalog.
 type Platform struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	Slug        string    `gorm:"type:text;not null;uniqueIndex"`
-	DisplayName string    `gorm:"type:text;not null"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID                uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Slug              string    `gorm:"type:text;not null;uniqueIndex"`
+	DisplayName       string    `gorm:"type:text;not null"`
+	IngestURLTemplate string    `gorm:"type:text;not null;default:''"`
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 func (Platform) TableName() string { return "streaming_platforms" }

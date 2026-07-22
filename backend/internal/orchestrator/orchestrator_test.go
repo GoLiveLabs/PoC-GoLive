@@ -13,6 +13,7 @@ import (
 	"live-orchestrator/backend/internal/mediaserver"
 	"live-orchestrator/backend/internal/obs/obsmock"
 	"live-orchestrator/backend/internal/positions"
+	"live-orchestrator/backend/internal/scenes"
 )
 
 // fakeMediaClient lets tests script the sequence of ListActiveStreams results.
@@ -75,22 +76,55 @@ func (f *fakePositionsStore) Save(ps []positions.Position) error {
 	return nil
 }
 
+type fakeScenesStore struct {
+	mu       sync.Mutex
+	loadData []scenes.Scene
+	loadErr  error
+	saved    []scenes.Scene
+	saveErr  error
+	saveN    int
+}
+
+func (f *fakeScenesStore) Load() ([]scenes.Scene, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.loadErr != nil {
+		return nil, f.loadErr
+	}
+	out := make([]scenes.Scene, len(f.loadData))
+	copy(out, f.loadData)
+	return out, nil
+}
+
+func (f *fakeScenesStore) Save(ss []scenes.Scene) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.saveN++
+	if f.saveErr != nil {
+		return f.saveErr
+	}
+	f.saved = make([]scenes.Scene, len(ss))
+	copy(f.saved, ss)
+	return nil
+}
+
 func newTestOrchestrator() (*Orchestrator, *fakeMediaClient, *obsmock.Mock) {
-	o, media, obsCtl, _ := newTestOrchestratorWithStore()
+	o, media, obsCtl, _, _ := newTestOrchestratorWithStore()
 	return o, media, obsCtl
 }
 
-func newTestOrchestratorWithStore() (*Orchestrator, *fakeMediaClient, *obsmock.Mock, *fakePositionsStore) {
+func newTestOrchestratorWithStore() (*Orchestrator, *fakeMediaClient, *obsmock.Mock, *fakePositionsStore, *fakeScenesStore) {
 	return newTestOrchestratorWithMediaSourceURL("rtmp://localhost:1935")
 }
 
-func newTestOrchestratorWithMediaSourceURL(baseURL string) (*Orchestrator, *fakeMediaClient, *obsmock.Mock, *fakePositionsStore) {
+func newTestOrchestratorWithMediaSourceURL(baseURL string) (*Orchestrator, *fakeMediaClient, *obsmock.Mock, *fakePositionsStore, *fakeScenesStore) {
 	media := &fakeMediaClient{}
 	obsCtl := obsmock.New()
 	hub := events.NewHub()
 	store := &fakePositionsStore{}
-	o := New(media, obsCtl, hub, "Program", time.Second, baseURL, store)
-	return o, media, obsCtl, store
+	sstore := &fakeScenesStore{}
+	o := New(media, obsCtl, hub, "Program", time.Second, baseURL, store, sstore)
+	return o, media, obsCtl, store, sstore
 }
 
 // onlineCamera brings a camera with the given id online via SyncOnce.
@@ -119,7 +153,7 @@ func TestSyncOnce_CameraAppears(t *testing.T) {
 }
 
 func TestSyncOnce_UsesConfiguredMediaSourceURL(t *testing.T) {
-	o, media, _, _ := newTestOrchestratorWithMediaSourceURL("rtmp://example.internal:1935")
+	o, media, _, _, _ := newTestOrchestratorWithMediaSourceURL("rtmp://example.internal:1935")
 	media.set([]mediaserver.StreamInfo{{Name: "camera1", Ready: true}}, nil)
 
 	cams := o.SyncOnce(context.Background())
@@ -222,7 +256,7 @@ func TestCreatePosition_DuplicateName(t *testing.T) {
 }
 
 func TestCreatePosition_OBSFailure(t *testing.T) {
-	o, _, obsCtl, store := newTestOrchestratorWithStore()
+	o, _, obsCtl, store, _ := newTestOrchestratorWithStore()
 	obsCtl.CreatePositionInputErr = errors.New("obs unreachable")
 
 	_, err := o.CreatePosition("Canto")
@@ -309,7 +343,7 @@ func TestCreatePosition_ConcurrentDuplicateCreate(t *testing.T) {
 // --- Orchestrator.RenamePosition ---
 
 func TestRenamePosition_Happy(t *testing.T) {
-	o, _, obsCtl, store := newTestOrchestratorWithStore()
+	o, _, obsCtl, store, _ := newTestOrchestratorWithStore()
 	pos, _ := o.CreatePosition("Principal")
 	saveNBefore := store.saveN
 	callsBefore := len(obsCtl.Inputs)
@@ -480,8 +514,8 @@ func TestAssignCamera_Happy(t *testing.T) {
 		t.Fatalf("expected camera1 assigned, got %+v", result)
 	}
 	inputName := positionInputName(pos.ID)
-	if !obsCtl.Enabled[inputName] {
-		t.Fatalf("expected position input enabled")
+	if obsCtl.Enabled[inputName] {
+		t.Fatalf("expected position input still disabled until Cut")
 	}
 	if !strings.Contains(obsCtl.Inputs[inputName], "camera1") {
 		t.Fatalf("expected input source to reference camera1, got %q", obsCtl.Inputs[inputName])
@@ -973,10 +1007,11 @@ func TestScale_IndependentAssignments(t *testing.T) {
 		if byID[pos[i].ID].CameraID != streams[i].Name {
 			t.Fatalf("expected position %d to hold %q, got %+v", i, streams[i].Name, byID[pos[i].ID])
 		}
-		if !obsCtl.Enabled[positionInputName(pos[i].ID)] {
-			t.Fatalf("expected position %d enabled", i)
+		if obsCtl.Enabled[positionInputName(pos[i].ID)] {
+			t.Fatalf("expected position %d still disabled until Cut", i)
 		}
 	}
+	_ = obsCtl
 }
 
 func TestScale_ZeroEnabledWithNothingAssigned(t *testing.T) {
@@ -1026,7 +1061,8 @@ func TestIT001_PositionsPersistAcrossRestart(t *testing.T) {
 	media1 := &fakeMediaClient{}
 	obsCtl1 := obsmock.New()
 	hub1 := events.NewHub()
-	o1 := New(media1, obsCtl1, hub1, "Program", time.Second, "rtmp://localhost:1935", store)
+	sstore := &fakeScenesStore{}
+	o1 := New(media1, obsCtl1, hub1, "Program", time.Second, "rtmp://localhost:1935", store, sstore)
 
 	pos, err := o1.CreatePosition("Principal")
 	if err != nil {
@@ -1042,7 +1078,7 @@ func TestIT001_PositionsPersistAcrossRestart(t *testing.T) {
 	media2 := &fakeMediaClient{}
 	obsCtl2 := obsmock.New()
 	hub2 := events.NewHub()
-	o2 := New(media2, obsCtl2, hub2, "Program", time.Second, "rtmp://localhost:1935", store2)
+	o2 := New(media2, obsCtl2, hub2, "Program", time.Second, "rtmp://localhost:1935", store2, &fakeScenesStore{})
 
 	got := o2.Positions()
 	if len(got) != 1 {
@@ -1096,6 +1132,681 @@ func TestIT005_OfflineTransitionPublishesPositionsUpdated(t *testing.T) {
 			t.Fatalf("expected published payload to include position %q", pos.ID)
 		case <-timeout:
 			t.Fatalf("timed out waiting for positions.updated event")
+		}
+	}
+}
+
+// --- Scene CRUD (UT-005�UT-027) ---
+
+func TestCreateScene_Happy(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	posA, _ := o.CreatePosition("A")
+	posB, _ := o.CreatePosition("B")
+	sc, err := o.CreateScene("Entrevista", []string{posA.ID, posB.ID})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if sc.Name != "Entrevista" || len(sc.PositionIDs) != 2 {
+		t.Fatalf("unexpected scene: %+v", sc)
+	}
+	found := false
+	for _, s := range o.Scenes() {
+		if s.ID == sc.ID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("scene not in Scenes()")
+	}
+}
+
+func TestCreateScene_EmptyName(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	if _, err := o.CreateScene("", nil); !errors.Is(err, ErrSceneNameRequired) {
+		t.Fatalf("expected ErrSceneNameRequired, got %v", err)
+	}
+}
+
+func TestCreateScene_NameTaken(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	if _, err := o.CreateScene("Entrevista", nil); err != nil {
+		t.Fatalf("first create: %v", err)
+	}
+	if _, err := o.CreateScene("Entrevista", nil); !errors.Is(err, ErrSceneNameTaken) {
+		t.Fatalf("expected ErrSceneNameTaken, got %v", err)
+	}
+}
+
+func TestCreateScene_EmptyPositions(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	sc, err := o.CreateScene("Vazia", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(sc.PositionIDs) != 0 {
+		t.Fatalf("expected zero positions, got %+v", sc)
+	}
+}
+
+func TestCreateScene_UnknownPosition(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	if _, err := o.CreateScene("X", []string{"unknown-id"}); !errors.Is(err, ErrPositionNotFound) {
+		t.Fatalf("expected ErrPositionNotFound, got %v", err)
+	}
+}
+
+func TestCreateScene_ReservedPosition(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	_ = o.ensureHiddenPosition()
+	if _, err := o.CreateScene("X", []string{simplePositionID}); !errors.Is(err, ErrReservedPosition) {
+		t.Fatalf("expected ErrReservedPosition, got %v", err)
+	}
+}
+
+func TestCreateScene_ConcurrentSameName(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	var wg sync.WaitGroup
+	errs := make(chan error, 2)
+	for range 2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := o.CreateScene("Dup", nil)
+			errs <- err
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	var okN, takenN int
+	for err := range errs {
+		if err == nil {
+			okN++
+		} else if errors.Is(err, ErrSceneNameTaken) {
+			takenN++
+		} else {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	}
+	if okN != 1 || takenN != 1 {
+		t.Fatalf("expected 1 success and 1 taken, got ok=%d taken=%d", okN, takenN)
+	}
+	n := 0
+	for _, s := range o.Scenes() {
+		if s.Name == "Dup" {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("expected exactly one scene named Dup, got %d", n)
+	}
+}
+
+func TestRenameScene_Happy(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	sc, _ := o.CreateScene("Old", nil)
+	got, err := o.RenameScene(sc.ID, "Novo Nome")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.Name != "Novo Nome" {
+		t.Fatalf("unexpected name: %+v", got)
+	}
+}
+
+func TestRenameScene_SameName(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	sc, _ := o.CreateScene("Same", nil)
+	if _, err := o.RenameScene(sc.ID, "Same"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRenameScene_NameTaken(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	a, _ := o.CreateScene("A", nil)
+	_, _ = o.CreateScene("B", nil)
+	if _, err := o.RenameScene(a.ID, "B"); !errors.Is(err, ErrSceneNameTaken) {
+		t.Fatalf("expected ErrSceneNameTaken, got %v", err)
+	}
+}
+
+func TestRenameScene_EmptyName(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	sc, _ := o.CreateScene("A", nil)
+	if _, err := o.RenameScene(sc.ID, ""); !errors.Is(err, ErrSceneNameRequired) {
+		t.Fatalf("expected ErrSceneNameRequired, got %v", err)
+	}
+}
+
+func TestUpdateScenePositions_Add(t *testing.T) {
+	o, media, obsCtl := newTestOrchestrator()
+	posA, _ := o.CreatePosition("A")
+	posB, _ := o.CreatePosition("B")
+	posC, _ := o.CreatePosition("C")
+	onlineCamera(o, media, "cam1")
+	_, _ = o.AssignCamera(posA.ID, "cam1")
+	sc, _ := o.CreateScene("S", []string{posA.ID, posB.ID})
+	_, _ = o.SetPreviewScene(sc.ID)
+	if _, err := o.Cut(context.Background()); err != nil {
+		t.Fatalf("cut: %v", err)
+	}
+	got, err := o.UpdateScenePositions(sc.ID, []string{posA.ID, posB.ID, posC.ID})
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if len(got.PositionIDs) != 3 {
+		t.Fatalf("expected 3 positions, got %+v", got)
+	}
+	if !obsCtl.Enabled[positionInputName(posC.ID)] {
+		t.Fatalf("expected posC enabled after live update")
+	}
+}
+
+func TestUpdateScenePositions_Remove(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	posA, _ := o.CreatePosition("A")
+	posB, _ := o.CreatePosition("B")
+	sc, _ := o.CreateScene("S", []string{posA.ID, posB.ID})
+	got, err := o.UpdateScenePositions(sc.ID, []string{posA.ID})
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if len(got.PositionIDs) != 1 || got.PositionIDs[0] != posA.ID {
+		t.Fatalf("unexpected: %+v", got)
+	}
+	foundB := false
+	for _, p := range o.Positions() {
+		if p.ID == posB.ID {
+			foundB = true
+		}
+	}
+	if !foundB {
+		t.Fatalf("posB should still exist as position")
+	}
+}
+
+func TestUpdateScenePositions_Dedupe(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	posA, _ := o.CreatePosition("A")
+	sc, _ := o.CreateScene("S", []string{posA.ID})
+	got, err := o.UpdateScenePositions(sc.ID, []string{posA.ID, posA.ID})
+	if err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if len(got.PositionIDs) != 1 {
+		t.Fatalf("expected deduped, got %+v", got)
+	}
+}
+
+func TestUpdateScenePositions_NotFound(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	if _, err := o.UpdateScenePositions("gone", nil); !errors.Is(err, ErrSceneNotFound) {
+		t.Fatalf("expected ErrSceneNotFound, got %v", err)
+	}
+}
+
+func TestUpdateScenePositions_LiveRemovesDisablesOBS(t *testing.T) {
+	o, media, obsCtl := newTestOrchestrator()
+	posA, _ := o.CreatePosition("A")
+	posB, _ := o.CreatePosition("B")
+	onlineCamera(o, media, "cam1")
+	_, _ = o.AssignCamera(posA.ID, "cam1")
+	sc, _ := o.CreateScene("S", []string{posA.ID, posB.ID})
+	_, _ = o.SetPreviewScene(sc.ID)
+	if _, err := o.Cut(context.Background()); err != nil {
+		t.Fatalf("cut: %v", err)
+	}
+	if !obsCtl.Enabled[positionInputName(posB.ID)] {
+		t.Fatalf("posB should be enabled while live")
+	}
+	if _, err := o.UpdateScenePositions(sc.ID, []string{posA.ID}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	if obsCtl.Enabled[positionInputName(posB.ID)] {
+		t.Fatalf("posB should be disabled after removal from live scene")
+	}
+}
+
+func TestDeleteScene_Happy(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	sc, _ := o.CreateScene("S", nil)
+	if err := o.DeleteScene(sc.ID); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	if len(o.Scenes()) != 0 {
+		t.Fatalf("expected empty scenes")
+	}
+}
+
+func TestDeleteScene_LiveBlocked(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	sc, _ := o.CreateScene("S", nil)
+	_, _ = o.SetPreviewScene(sc.ID)
+	if _, err := o.Cut(context.Background()); err != nil {
+		t.Fatalf("cut: %v", err)
+	}
+	if err := o.DeleteScene(sc.ID); !errors.Is(err, ErrSceneIsLive) {
+		t.Fatalf("expected ErrSceneIsLive, got %v", err)
+	}
+}
+
+func TestDeleteScene_PreviewOnlyClearsPreview(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	sc, _ := o.CreateScene("S", nil)
+	_, _ = o.SetPreviewScene(sc.ID)
+	if err := o.DeleteScene(sc.ID); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	ls := o.LiveState()
+	if ls.PreviewKind != LiveKindNone || ls.PreviewID != "" {
+		t.Fatalf("expected preview cleared, got %+v", ls)
+	}
+}
+
+func TestDeleteScene_Double(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	sc, _ := o.CreateScene("S", nil)
+	_ = o.DeleteScene(sc.ID)
+	if err := o.DeleteScene(sc.ID); !errors.Is(err, ErrSceneNotFound) {
+		t.Fatalf("expected ErrSceneNotFound, got %v", err)
+	}
+}
+
+func TestDeleteScene_ConcurrentWithCut(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	sc, _ := o.CreateScene("S", nil)
+	_, _ = o.SetPreviewScene(sc.ID)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		_ = o.DeleteScene(sc.ID)
+	}()
+	go func() {
+		defer wg.Done()
+		_, _ = o.Cut(context.Background())
+	}()
+	wg.Wait()
+	// Either deleted (not live) or live; must not panic.
+	_ = o.LiveState()
+	_ = o.Scenes()
+}
+
+func TestScenes_List(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	if len(o.Scenes()) != 0 {
+		t.Fatalf("expected empty")
+	}
+	_, _ = o.CreateScene("A", nil)
+	_, _ = o.CreateScene("B", nil)
+	if len(o.Scenes()) != 2 {
+		t.Fatalf("expected 2, got %d", len(o.Scenes()))
+	}
+}
+
+func TestScene_DynamicCameraResolution(t *testing.T) {
+	o, media, obsCtl := newTestOrchestrator()
+	posA, _ := o.CreatePosition("A")
+	streams := []mediaserver.StreamInfo{{Name: "cam1", Ready: true}, {Name: "cam2", Ready: true}}
+	media.set(streams, nil)
+	o.SyncOnce(context.Background())
+	_, _ = o.AssignCamera(posA.ID, "cam1")
+	sc, _ := o.CreateScene("Entrevista", []string{posA.ID})
+	_, _ = o.AssignCamera(posA.ID, "cam2")
+	_, _ = o.SetPreviewScene(sc.ID)
+	if _, err := o.Cut(context.Background()); err != nil {
+		t.Fatalf("cut: %v", err)
+	}
+	if !strings.Contains(obsCtl.Inputs[positionInputName(posA.ID)], "cam2") {
+		t.Fatalf("expected cam2 source after cut, got %q", obsCtl.Inputs[positionInputName(posA.ID)])
+	}
+}
+
+func TestScene_MissingPositionSkippedOnCut(t *testing.T) {
+	o, media, _ := newTestOrchestrator()
+	posX, _ := o.CreatePosition("X")
+	onlineCamera(o, media, "cam1")
+	_, _ = o.AssignCamera(posX.ID, "cam1")
+	sc, _ := o.CreateScene("S", []string{posX.ID})
+	if err := o.DeletePosition(posX.ID); err != nil {
+		t.Fatalf("delete pos: %v", err)
+	}
+	found := false
+	for _, s := range o.Scenes() {
+		if s.ID == sc.ID {
+			found = true
+			if len(s.PositionIDs) != 1 || s.PositionIDs[0] != posX.ID {
+				t.Fatalf("scene should still list posX id, got %+v", s)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("scene should still be listed")
+	}
+	_, _ = o.SetPreviewScene(sc.ID)
+	if _, err := o.Cut(context.Background()); err != nil {
+		t.Fatalf("cut should succeed skipping missing position: %v", err)
+	}
+}
+
+// --- Preview and Cut (UT-028�UT-049) ---
+
+func TestSetPreviewCamera_Happy(t *testing.T) {
+	o, media, _ := newTestOrchestrator()
+	onlineCamera(o, media, "cam1")
+	ls, err := o.SetPreviewCamera("cam1")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if ls.PreviewKind != LiveKindCamera || ls.PreviewID != "cam1" {
+		t.Fatalf("unexpected: %+v", ls)
+	}
+	if ls.LiveKind != LiveKindNone {
+		t.Fatalf("live should be unchanged empty: %+v", ls)
+	}
+}
+
+func TestSetPreviewScene_Happy(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	sc, _ := o.CreateScene("S", nil)
+	ls, err := o.SetPreviewScene(sc.ID)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if ls.PreviewKind != LiveKindScene || ls.PreviewID != sc.ID {
+		t.Fatalf("unexpected: %+v", ls)
+	}
+}
+
+func TestSetPreviewCamera_MirrorsLive(t *testing.T) {
+	o, media, _ := newTestOrchestrator()
+	onlineCamera(o, media, "cam1")
+	_, _ = o.SetPreviewCamera("cam1")
+	_, _ = o.Cut(context.Background())
+	ls, err := o.SetPreviewCamera("cam1")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if ls.PreviewID != "cam1" || ls.LiveID != "cam1" {
+		t.Fatalf("unexpected: %+v", ls)
+	}
+}
+
+func TestSetPreviewCamera_Unknown(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	if _, err := o.SetPreviewCamera("unknown-cam"); !errors.Is(err, ErrCameraNotFound) {
+		t.Fatalf("expected ErrCameraNotFound, got %v", err)
+	}
+}
+
+func TestSetPreviewScene_Unknown(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	if _, err := o.SetPreviewScene("unknown-scene"); !errors.Is(err, ErrSceneNotFound) {
+		t.Fatalf("expected ErrSceneNotFound, got %v", err)
+	}
+}
+
+func TestCut_CameraExclusive(t *testing.T) {
+	o, media, obsCtl := newTestOrchestrator()
+	pos, _ := o.CreatePosition("A")
+	onlineCamera(o, media, "cam1")
+	_, _ = o.AssignCamera(pos.ID, "cam1")
+	_, _ = o.SetPreviewCamera("cam1")
+	ls, err := o.Cut(context.Background())
+	if err != nil {
+		t.Fatalf("cut: %v", err)
+	}
+	if ls.LiveKind != LiveKindCamera || ls.LiveID != "cam1" {
+		t.Fatalf("unexpected live: %+v", ls)
+	}
+	simpleIn := positionInputName(simplePositionID)
+	if !obsCtl.Enabled[simpleIn] {
+		t.Fatalf("hidden position should be enabled")
+	}
+	if obsCtl.Enabled[positionInputName(pos.ID)] {
+		t.Fatalf("named position should be disabled")
+	}
+}
+
+func TestCut_SceneExclusive(t *testing.T) {
+	o, media, obsCtl := newTestOrchestrator()
+	posA, _ := o.CreatePosition("A")
+	posB, _ := o.CreatePosition("B")
+	streams := []mediaserver.StreamInfo{{Name: "c1", Ready: true}, {Name: "c2", Ready: true}}
+	media.set(streams, nil)
+	o.SyncOnce(context.Background())
+	_, _ = o.AssignCamera(posA.ID, "c1")
+	_, _ = o.AssignCamera(posB.ID, "c2")
+	sc, _ := o.CreateScene("S", []string{posA.ID, posB.ID})
+	_, _ = o.SetPreviewScene(sc.ID)
+	if _, err := o.Cut(context.Background()); err != nil {
+		t.Fatalf("cut: %v", err)
+	}
+	if !obsCtl.Enabled[positionInputName(posA.ID)] || !obsCtl.Enabled[positionInputName(posB.ID)] {
+		t.Fatalf("both scene positions should be enabled")
+	}
+	if obsCtl.Enabled[positionInputName(simplePositionID)] {
+		t.Fatalf("hidden should be disabled")
+	}
+}
+
+func TestCut_EmptyPreview(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	if _, err := o.Cut(context.Background()); !errors.Is(err, ErrPreviewEmpty) {
+		t.Fatalf("expected ErrPreviewEmpty, got %v", err)
+	}
+}
+
+func TestCut_OfflineCamera(t *testing.T) {
+	o, media, _ := newTestOrchestrator()
+	onlineCamera(o, media, "cam1")
+	_, _ = o.SetPreviewCamera("cam1")
+	offlineCamera(o, media)
+	before := o.LiveState()
+	if _, err := o.Cut(context.Background()); !errors.Is(err, ErrSourceUnavailable) {
+		t.Fatalf("expected ErrSourceUnavailable, got %v", err)
+	}
+	after := o.LiveState()
+	if after != before {
+		t.Fatalf("live state should be retained: before=%+v after=%+v", before, after)
+	}
+}
+
+func TestCut_Idempotent(t *testing.T) {
+	o, media, obsCtl := newTestOrchestrator()
+	onlineCamera(o, media, "cam1")
+	_, _ = o.SetPreviewCamera("cam1")
+	if _, err := o.Cut(context.Background()); err != nil {
+		t.Fatalf("first cut: %v", err)
+	}
+	simpleIn := positionInputName(simplePositionID)
+	if !obsCtl.Enabled[simpleIn] {
+		t.Fatalf("should be enabled")
+	}
+	// Force disable then second cut should still be no-op if already live same
+	// (implementation returns early without OBS). Second cut must not error.
+	ls, err := o.Cut(context.Background())
+	if err != nil {
+		t.Fatalf("second cut: %v", err)
+	}
+	if ls.LiveID != "cam1" {
+		t.Fatalf("unexpected: %+v", ls)
+	}
+}
+
+func TestCut_SceneToCamera(t *testing.T) {
+	o, media, obsCtl := newTestOrchestrator()
+	posA, _ := o.CreatePosition("A")
+	onlineCamera(o, media, "cam1")
+	_, _ = o.AssignCamera(posA.ID, "cam1")
+	sc, _ := o.CreateScene("S", []string{posA.ID})
+	_, _ = o.SetPreviewScene(sc.ID)
+	_, _ = o.Cut(context.Background())
+	_, _ = o.SetPreviewCamera("cam1")
+	_, _ = o.Cut(context.Background())
+	if obsCtl.Enabled[positionInputName(posA.ID)] {
+		t.Fatalf("scene pos should be disabled")
+	}
+	if !obsCtl.Enabled[positionInputName(simplePositionID)] {
+		t.Fatalf("hidden should be enabled")
+	}
+}
+
+func TestCut_CameraToScene(t *testing.T) {
+	o, media, obsCtl := newTestOrchestrator()
+	posA, _ := o.CreatePosition("A")
+	onlineCamera(o, media, "cam1")
+	_, _ = o.AssignCamera(posA.ID, "cam1")
+	sc, _ := o.CreateScene("S", []string{posA.ID})
+	_, _ = o.SetPreviewCamera("cam1")
+	_, _ = o.Cut(context.Background())
+	_, _ = o.SetPreviewScene(sc.ID)
+	_, _ = o.Cut(context.Background())
+	if obsCtl.Enabled[positionInputName(simplePositionID)] {
+		t.Fatalf("hidden should be disabled")
+	}
+	if !obsCtl.Enabled[positionInputName(posA.ID)] {
+		t.Fatalf("scene pos should be enabled")
+	}
+}
+
+func TestAssignCamera_DoesNotEnable(t *testing.T) {
+	o, media, obsCtl := newTestOrchestrator()
+	pos, _ := o.CreatePosition("A")
+	onlineCamera(o, media, "cam1")
+	if _, err := o.AssignCamera(pos.ID, "cam1"); err != nil {
+		t.Fatalf("assign: %v", err)
+	}
+	if obsCtl.Enabled[positionInputName(pos.ID)] {
+		t.Fatalf("should remain disabled until Cut")
+	}
+}
+
+func TestAssignCamera_Reserved(t *testing.T) {
+	o, media, _ := newTestOrchestrator()
+	onlineCamera(o, media, "cam1")
+	_ = o.ensureHiddenPosition()
+	if _, err := o.AssignCamera(simplePositionID, "cam1"); !errors.Is(err, ErrReservedPosition) {
+		t.Fatalf("expected ErrReservedPosition, got %v", err)
+	}
+}
+
+func TestCut_PreviewOfflineAcceptedThenRejected(t *testing.T) {
+	o, media, _ := newTestOrchestrator()
+	onlineCamera(o, media, "offline-cam")
+	_, _ = o.SetPreviewCamera("offline-cam")
+	offlineCamera(o, media)
+	if _, err := o.Cut(context.Background()); !errors.Is(err, ErrSourceUnavailable) {
+		t.Fatalf("expected ErrSourceUnavailable, got %v", err)
+	}
+}
+
+func TestLive_CameraStaysInLiveStateWhenOffline(t *testing.T) {
+	o, media, _ := newTestOrchestrator()
+	onlineCamera(o, media, "cam1")
+	_, _ = o.SetPreviewCamera("cam1")
+	_, _ = o.Cut(context.Background())
+	offlineCamera(o, media)
+	ls := o.LiveState()
+	if ls.LiveID != "cam1" {
+		t.Fatalf("live id should remain, got %+v", ls)
+	}
+	cams := o.Cameras()
+	if len(cams) != 1 || cams[0].Status != StatusOffline {
+		t.Fatalf("camera should be offline: %+v", cams)
+	}
+}
+
+func TestSetPreviewCamera_ZeroCameras(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	if len(o.Cameras()) != 0 {
+		t.Fatalf("expected zero cameras")
+	}
+	if _, err := o.SetPreviewCamera("any"); !errors.Is(err, ErrCameraNotFound) {
+		t.Fatalf("expected not found, got %v", err)
+	}
+}
+
+func TestCut_RapidSequenceLastWins(t *testing.T) {
+	o, media, _ := newTestOrchestrator()
+	streams := []mediaserver.StreamInfo{{Name: "cam1", Ready: true}, {Name: "cam2", Ready: true}}
+	media.set(streams, nil)
+	o.SyncOnce(context.Background())
+	_, _ = o.SetPreviewCamera("cam1")
+	_, _ = o.Cut(context.Background())
+	_, _ = o.SetPreviewCamera("cam2")
+	_, _ = o.Cut(context.Background())
+	if o.LiveState().LiveID != "cam2" {
+		t.Fatalf("expected cam2 live, got %+v", o.LiveState())
+	}
+}
+
+func TestCut_SameCameraNoOp(t *testing.T) {
+	o, media, obsCtl := newTestOrchestrator()
+	onlineCamera(o, media, "cam1")
+	_, _ = o.SetPreviewCamera("cam1")
+	_, _ = o.Cut(context.Background())
+	simpleIn := positionInputName(simplePositionID)
+	if !obsCtl.Enabled[simpleIn] {
+		t.Fatalf("enabled after first cut")
+	}
+	_, _ = o.SetPreviewCamera("cam1")
+	_, _ = o.Cut(context.Background())
+	if !obsCtl.Enabled[simpleIn] {
+		t.Fatalf("should stay enabled continuously")
+	}
+}
+
+func TestCut_ModoSimplesAudioFollows(t *testing.T) {
+	o, media, _ := newTestOrchestrator()
+	onlineCamera(o, media, "cam1")
+	_, _ = o.SetPreviewCamera("cam1")
+	if _, err := o.Cut(context.Background()); err != nil {
+		t.Fatalf("cut: %v", err)
+	}
+	o.mu.RLock()
+	audioID := o.audioPositionID
+	o.mu.RUnlock()
+	if audioID != simplePositionID {
+		t.Fatalf("expected audio on hidden position, got %q", audioID)
+	}
+}
+
+func TestCut_ModoSimplesNoAudioError(t *testing.T) {
+	// No audio-track detection in system; cut still succeeds for any online camera.
+	o, media, _ := newTestOrchestrator()
+	onlineCamera(o, media, "cam2")
+	_, _ = o.SetPreviewCamera("cam2")
+	if _, err := o.Cut(context.Background()); err != nil {
+		t.Fatalf("cut should succeed: %v", err)
+	}
+}
+
+func TestCut_SourceUnavailableRetainsPreview(t *testing.T) {
+	o, media, _ := newTestOrchestrator()
+	onlineCamera(o, media, "cam1")
+	_, _ = o.SetPreviewCamera("cam1")
+	// Mark offline without pruning via SyncOnce so preview selection remains.
+	o.mu.Lock()
+	if cam, ok := o.cameras["cam1"]; ok {
+		cam.Status = StatusOffline
+	}
+	o.mu.Unlock()
+	if _, err := o.Cut(context.Background()); !errors.Is(err, ErrSourceUnavailable) {
+		t.Fatalf("expected ErrSourceUnavailable, got %v", err)
+	}
+	ls := o.LiveState()
+	if ls.PreviewKind != LiveKindCamera || ls.PreviewID != "cam1" {
+		t.Fatalf("preview retained: %+v", ls)
+	}
+}
+
+func TestHiddenPosition_ExcludedFromPositions(t *testing.T) {
+	o, _, _ := newTestOrchestrator()
+	_ = o.ensureHiddenPosition()
+	for _, p := range o.Positions() {
+		if p.ID == simplePositionID {
+			t.Fatalf("hidden position must not appear in Positions()")
 		}
 	}
 }

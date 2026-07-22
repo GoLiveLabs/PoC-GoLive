@@ -10,6 +10,7 @@ import (
 type CreateRequest struct {
 	PlatformID uuid.UUID `json:"platformId"`
 	LiveID     string    `json:"liveId"`
+	StreamKey  string    `json:"streamKey"`
 	IsActive   *bool     `json:"isActive"`
 }
 
@@ -24,16 +25,19 @@ func (r CreateRequest) ActiveOrDefault() bool {
 // changed here: reassigning either is a new association, not an edit of
 // this one, so they simply have no place in this DTO.
 type UpdateRequest struct {
-	LiveID   *string `json:"liveId"`
-	IsActive *bool   `json:"isActive"`
+	LiveID    *string `json:"liveId"`
+	StreamKey *string `json:"streamKey"`
+	IsActive  *bool   `json:"isActive"`
 }
 
 // Response is the wire representation of a client live id.
+// StreamKey is always masked (ADR-008).
 type Response struct {
 	ID         uuid.UUID `json:"id"`
 	ClientID   uuid.UUID `json:"clientId"`
 	PlatformID uuid.UUID `json:"platformId"`
 	LiveID     string    `json:"liveId"`
+	StreamKey  string    `json:"streamKey"`
 	IsActive   bool      `json:"isActive"`
 	CreatedAt  time.Time `json:"createdAt"`
 	UpdatedAt  time.Time `json:"updatedAt"`
@@ -45,6 +49,7 @@ func ToResponse(l *ClientLiveID) Response {
 		ClientID:   l.ClientID,
 		PlatformID: l.PlatformID,
 		LiveID:     l.LiveID,
+		StreamKey:  MaskStreamKey(l.StreamKey),
 		IsActive:   l.IsActive,
 		CreatedAt:  l.CreatedAt,
 		UpdatedAt:  l.UpdatedAt,

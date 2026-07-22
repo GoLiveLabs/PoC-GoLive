@@ -121,6 +121,8 @@ func writeLiveIDError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusConflict, "this live id already exists for the client and platform")
 	case isErr(err, liveid.ErrInvalidLiveID):
 		writeValidationError(w, "liveId", err.Error())
+	case isErr(err, liveid.ErrInvalidStreamKey):
+		writeValidationError(w, "streamKey", err.Error())
 	default:
 		writeInternalError(w, err)
 	}

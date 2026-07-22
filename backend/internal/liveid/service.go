@@ -38,10 +38,17 @@ type ListFilter struct {
 	IsActive   *bool
 }
 
+// Destination is an active live-id row resolved to a push URL for broadcast.
+type Destination struct {
+	LiveID       uuid.UUID
+	PlatformName string
+	PushURL      string
+}
+
 // Create checks both the client and the platform inside the same transaction
 // as the insert (same TOCTOU reasoning as ingest.Service.Create).
 func (s *Service) Create(ctx context.Context, clientID uuid.UUID, req CreateRequest) (*ClientLiveID, error) {
-	l, err := New(clientID, req.PlatformID, req.LiveID, req.ActiveOrDefault())
+	l, err := New(clientID, req.PlatformID, req.LiveID, req.StreamKey, req.ActiveOrDefault())
 	if err != nil {
 		return nil, err
 	}
@@ -158,6 +165,13 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, req UpdateRequest) (
 		if req.IsActive != nil {
 			l.IsActive = *req.IsActive
 		}
+		if req.StreamKey != nil {
+			streamKey, err := normalizeStreamKey(*req.StreamKey)
+			if err != nil {
+				return err
+			}
+			l.StreamKey = streamKey
+		}
 
 		if err := tx.Save(&l).Error; err != nil {
 			return err
@@ -169,6 +183,41 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, req UpdateRequest) (
 		return nil, err
 	}
 	return &updated, nil
+}
+
+// ListActiveForClient returns every IsActive live id for clientID with
+// PushURL = platform.IngestURLTemplate + "/" + liveID.StreamKey. Unpaginated;
+// intended for internal consumers (broadcast), not the HTTP list endpoints.
+func (s *Service) ListActiveForClient(ctx context.Context, clientID uuid.UUID) ([]Destination, error) {
+	type row struct {
+		ID                uuid.UUID
+		PlatformName      string
+		IngestURLTemplate string
+		StreamKey         string
+	}
+	var rows []row
+	err := s.db.WithContext(ctx).Raw(`
+		SELECT l.id,
+		       p.display_name AS platform_name,
+		       p.ingest_url_template,
+		       l.stream_key
+		FROM client_live_ids l
+		JOIN streaming_platforms p ON p.id = l.platform_id
+		WHERE l.client_id = ? AND l.is_active = true
+		ORDER BY l.created_at DESC, l.id DESC
+	`, clientID).Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Destination, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, Destination{
+			LiveID:       r.ID,
+			PlatformName: r.PlatformName,
+			PushURL:      r.IngestURLTemplate + "/" + r.StreamKey,
+		})
+	}
+	return out, nil
 }
 
 // Delete is a hard delete: to deactivate without removing, PATCH isActive=false.

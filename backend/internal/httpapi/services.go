@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"live-orchestrator/backend/internal/broadcast"
 	"live-orchestrator/backend/internal/client"
 	"live-orchestrator/backend/internal/ingest"
 	"live-orchestrator/backend/internal/liveid"
@@ -46,4 +47,13 @@ type LiveIDService interface {
 	List(ctx context.Context, filter liveid.ListFilter, page pagination.Request) (pagination.Page[liveid.Response], error)
 	Update(ctx context.Context, id uuid.UUID, req liveid.UpdateRequest) (*liveid.ClientLiveID, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// BroadcastService is the subset of broadcast.Manager the HTTP layer depends on.
+type BroadcastService interface {
+	SetActiveClient(ctx context.Context, clientID uuid.UUID) error
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+	RestartDestination(ctx context.Context, liveID uuid.UUID) error
+	Snapshot() broadcast.StatusSnapshot
 }

@@ -44,6 +44,17 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	if err := writeWSEvent(ctx, conn, "positions.updated", s.orch.Positions()); err != nil {
 		return
 	}
+	if err := writeWSEvent(ctx, conn, "scenes.updated", s.orch.Scenes()); err != nil {
+		return
+	}
+	if err := writeWSEvent(ctx, conn, "live.updated", s.orch.LiveState()); err != nil {
+		return
+	}
+	if s.broadcast != nil {
+		if err := writeWSEvent(ctx, conn, "broadcast.status", s.broadcast.Snapshot()); err != nil {
+			return
+		}
+	}
 
 	ch, cancel := s.hub.Subscribe()
 	defer cancel()

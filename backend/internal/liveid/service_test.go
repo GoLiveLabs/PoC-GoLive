@@ -137,3 +137,91 @@ func TestDelete_HardDelete(t *testing.T) {
 		t.Fatalf("expected ErrNotFound after hard delete, got %v", err)
 	}
 }
+
+// UT-073
+func TestCreate_PersistsStreamKeyUnmaskedAtServiceLayer(t *testing.T) {
+	f := newFixtures(t)
+	ctx := context.Background()
+
+	c, _ := f.clientSvc.Create(ctx, client.CreateRequest{Name: "Acme"})
+	p, _ := f.platformSvc.Create(ctx, streamplatform.CreateRequest{Slug: "youtube", DisplayName: "YouTube"})
+	const key = "xxxx-yyyy-miu9"
+	created, err := f.liveIDSvc.Create(ctx, c.ID, liveid.CreateRequest{
+		PlatformID: p.ID,
+		LiveID:     "abc",
+		StreamKey:  key,
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	got, err := f.liveIDSvc.GetByID(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.StreamKey != key {
+		t.Fatalf("expected StreamKey %q unmasked at service layer, got %q", key, got.StreamKey)
+	}
+}
+
+// UT-076
+func TestListActiveForClient_ResolvesPushURLs(t *testing.T) {
+	f := newFixtures(t)
+	ctx := context.Background()
+
+	c, _ := f.clientSvc.Create(ctx, client.CreateRequest{Name: "Acme"})
+	p, _ := f.platformSvc.Create(ctx, streamplatform.CreateRequest{
+		Slug:              "youtube",
+		DisplayName:       "YouTube",
+		IngestURLTemplate: "rtmp://a.rtmp.youtube.com/live2",
+	})
+	inactive := false
+	if _, err := f.liveIDSvc.Create(ctx, c.ID, liveid.CreateRequest{
+		PlatformID: p.ID,
+		LiveID:     "inactive-one",
+		StreamKey:  "key-inactive",
+		IsActive:   &inactive,
+	}); err != nil {
+		t.Fatalf("create inactive: %v", err)
+	}
+	active, err := f.liveIDSvc.Create(ctx, c.ID, liveid.CreateRequest{
+		PlatformID: p.ID,
+		LiveID:     "active-one",
+		StreamKey:  "xxxx-yyyy-miu9",
+	})
+	if err != nil {
+		t.Fatalf("create active: %v", err)
+	}
+
+	dests, err := f.liveIDSvc.ListActiveForClient(ctx, c.ID)
+	if err != nil {
+		t.Fatalf("ListActiveForClient: %v", err)
+	}
+	if len(dests) != 1 {
+		t.Fatalf("expected 1 active destination, got %+v", dests)
+	}
+	wantURL := "rtmp://a.rtmp.youtube.com/live2/xxxx-yyyy-miu9"
+	if dests[0].LiveID != active.ID || dests[0].PushURL != wantURL {
+		t.Fatalf("unexpected destination: %+v", dests[0])
+	}
+	if dests[0].PlatformName != "YouTube" {
+		t.Fatalf("expected PlatformName YouTube, got %q", dests[0].PlatformName)
+	}
+}
+
+// UT-077
+func TestListActiveForClient_Empty(t *testing.T) {
+	f := newFixtures(t)
+	ctx := context.Background()
+
+	c, err := f.clientSvc.Create(ctx, client.CreateRequest{Name: "Empty"})
+	if err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	dests, err := f.liveIDSvc.ListActiveForClient(ctx, c.ID)
+	if err != nil {
+		t.Fatalf("ListActiveForClient: %v", err)
+	}
+	if len(dests) != 0 {
+		t.Fatalf("expected empty slice, got %+v", dests)
+	}
+}

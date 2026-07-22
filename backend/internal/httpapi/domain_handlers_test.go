@@ -2,9 +2,11 @@ package httpapi
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +17,7 @@ import (
 	"live-orchestrator/backend/internal/liveid"
 	"live-orchestrator/backend/internal/pagination"
 	"live-orchestrator/backend/internal/streamplatform"
+	"live-orchestrator/backend/internal/testdb"
 )
 
 func authedRequest(method, target string, body []byte) *http.Request {
@@ -311,5 +314,88 @@ func TestDeleteLiveID_204(t *testing.T) {
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d", rec.Code)
+	}
+}
+
+// IT-029: PATCH streaming-platforms updates ingestUrlTemplate; GET reflects it.
+func TestIntegration_PatchPlatform_IngestURLTemplate(t *testing.T) {
+	db := testdb.New(t)
+	platformSvc := streamplatform.NewService(db)
+	srv := newDomainTestServer(nil, nil, platformSvc, nil)
+	ctx := context.Background()
+
+	p, err := platformSvc.Create(ctx, streamplatform.CreateRequest{Slug: "youtube", DisplayName: "YouTube"})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	body := []byte(`{"ingestUrlTemplate":"rtmp://a.rtmp.youtube.com/live2"}`)
+	req := authedRequest(http.MethodPatch, "/api/v1/streaming-platforms/"+p.ID.String(), body)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("PATCH expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	req = authedRequest(http.MethodGet, "/api/v1/streaming-platforms/"+p.ID.String(), nil)
+	rec = httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var got streamplatform.Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got.IngestURLTemplate != "rtmp://a.rtmp.youtube.com/live2" {
+		t.Fatalf("expected ingestUrlTemplate updated, got %q", got.IngestURLTemplate)
+	}
+}
+
+// IT-030: PATCH live-ids streamKey; response is masked, never raw.
+func TestIntegration_PatchLiveID_StreamKeyMasked(t *testing.T) {
+	db := testdb.New(t)
+	clientSvc := client.NewService(db)
+	platformSvc := streamplatform.NewService(db)
+	liveIDSvc := liveid.NewService(db, clientSvc, platformSvc)
+	srv := newDomainTestServer(clientSvc, nil, platformSvc, liveIDSvc)
+	ctx := context.Background()
+
+	c, err := clientSvc.Create(ctx, client.CreateRequest{Name: "Acme"})
+	if err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	p, err := platformSvc.Create(ctx, streamplatform.CreateRequest{Slug: "youtube", DisplayName: "YouTube"})
+	if err != nil {
+		t.Fatalf("create platform: %v", err)
+	}
+	l, err := liveIDSvc.Create(ctx, c.ID, liveid.CreateRequest{PlatformID: p.ID, LiveID: "abc", StreamKey: "oldkey"})
+	if err != nil {
+		t.Fatalf("create live id: %v", err)
+	}
+
+	const raw = "newkey1234"
+	body := []byte(`{"streamKey":"` + raw + `"}`)
+	// Existing route is flat PATCH /live-ids/{id} (no nested client path).
+	req := authedRequest(http.MethodPatch, "/api/v1/live-ids/"+l.ID.String(), body)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("PATCH expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var got liveid.Response
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got.StreamKey == raw {
+		t.Fatalf("response leaked raw streamKey")
+	}
+	if got.StreamKey != "****1234" && !strings.HasSuffix(got.StreamKey, "1234") {
+		t.Fatalf("expected masked key ending in 1234, got %q", got.StreamKey)
+	}
+	for _, r := range got.StreamKey[:len(got.StreamKey)-4] {
+		if r != '*' {
+			t.Fatalf("expected '*' mask prefix, got %q", got.StreamKey)
+		}
 	}
 }

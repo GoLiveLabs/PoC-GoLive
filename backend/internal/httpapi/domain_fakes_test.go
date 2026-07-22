@@ -110,5 +110,5 @@ func (f *fakeLiveIDService) Delete(context.Context, uuid.UUID) error {
 // (unused by these tests) plus the given domain fakes.
 func newDomainTestServer(clients ClientService, ingests IngestService, platforms StreamPlatformService, liveIDs LiveIDService) http.Handler {
 	hub := events.NewHub()
-	return NewServer(&fakeOrchestrator{}, hub, testToken, clients, ingests, platforms, liveIDs).Handler()
+	return NewServer(&fakeOrchestrator{}, hub, testToken, clients, ingests, platforms, liveIDs, nil).Handler()
 }

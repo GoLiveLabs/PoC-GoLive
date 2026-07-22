@@ -10,10 +10,13 @@ import (
 	"time"
 
 	"github.com/andreykaipov/goobs"
+	"github.com/andreykaipov/goobs/api/requests/config"
 	"github.com/andreykaipov/goobs/api/requests/general"
 	"github.com/andreykaipov/goobs/api/requests/inputs"
 	"github.com/andreykaipov/goobs/api/requests/sceneitems"
 	"github.com/andreykaipov/goobs/api/requests/scenes"
+	"github.com/andreykaipov/goobs/api/requests/stream"
+	"github.com/andreykaipov/goobs/api/typedefs"
 )
 
 // InputKind is the OBS input kind used for camera sources fed by MediaMTX.
@@ -49,6 +52,13 @@ type Controller interface {
 	RemoveInput(inputName string) error
 	IsConnected() bool
 	Reconnect() error
+	// StartProgramStream configures OBS custom RTMP output to rtmpURL and
+	// starts the program stream.
+	StartProgramStream(rtmpURL string) error
+	// StopProgramStream stops the OBS program stream if it is active.
+	StopProgramStream() error
+	// IsStreaming reports whether OBS currently has an active stream output.
+	IsStreaming() bool
 }
 
 // ObsController is the real Controller implementation, backed by goobs.
@@ -366,4 +376,54 @@ func (o *ObsController) SetInputAudioMuted(inputName string, muted bool) error {
 		return fmt.Errorf("setting mute for %q: %w", inputName, err)
 	}
 	return nil
+}
+
+// StartProgramStream points OBS at rtmpURL via the custom RTMP service and
+// starts the stream output.
+func (o *ObsController) StartProgramStream(rtmpURL string) error {
+	client, err := o.getClient()
+	if err != nil {
+		return fmt.Errorf("start program stream: %w", err)
+	}
+	_, err = client.Config.SetStreamServiceSettings(
+		config.NewSetStreamServiceSettingsParams().
+			WithStreamServiceType("rtmp_custom").
+			WithStreamServiceSettings(&typedefs.StreamServiceSettings{
+				Server: rtmpURL,
+				Key:    "",
+			}),
+	)
+	if err != nil {
+		return fmt.Errorf("setting stream service to %q: %w", rtmpURL, err)
+	}
+	if _, err := client.Stream.StartStream(&stream.StartStreamParams{}); err != nil {
+		return fmt.Errorf("starting stream: %w", err)
+	}
+	return nil
+}
+
+// StopProgramStream stops the OBS stream output.
+func (o *ObsController) StopProgramStream() error {
+	client, err := o.getClient()
+	if err != nil {
+		return fmt.Errorf("stop program stream: %w", err)
+	}
+	if _, err := client.Stream.StopStream(&stream.StopStreamParams{}); err != nil {
+		return fmt.Errorf("stopping stream: %w", err)
+	}
+	return nil
+}
+
+// IsStreaming reports whether the OBS stream output is currently active.
+// Returns false when OBS is unreachable or the status query fails.
+func (o *ObsController) IsStreaming() bool {
+	client, err := o.getClient()
+	if err != nil {
+		return false
+	}
+	status, err := client.Stream.GetStreamStatus()
+	if err != nil {
+		return false
+	}
+	return status.OutputActive
 }

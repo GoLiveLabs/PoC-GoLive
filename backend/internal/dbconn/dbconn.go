@@ -66,6 +66,14 @@ CREATE TABLE IF NOT EXISTS client_live_ids (
 CREATE UNIQUE INDEX IF NOT EXISTS client_live_ids_tuple_idx
 	ON client_live_ids (client_id, platform_id, live_id);
 CREATE INDEX IF NOT EXISTS client_live_ids_created_idx ON client_live_ids (created_at DESC, id DESC);
+
+-- Additive columns for RTMP push credentials (ADR-008). Kept as ALTER …
+-- ADD COLUMN IF NOT EXISTS so existing deployments pick them up on restart
+-- without a separate migration runner.
+ALTER TABLE streaming_platforms
+	ADD COLUMN IF NOT EXISTS ingest_url_template text NOT NULL DEFAULT '';
+ALTER TABLE client_live_ids
+	ADD COLUMN IF NOT EXISTS stream_key text NOT NULL DEFAULT '';
 `
 
 // Open connects to Postgres and creates the schema for the domain models.

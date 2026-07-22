@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Validate tag matches vMAJOR.MINOR.PATCH
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '$TAG' does not match required vMAJOR.MINOR.PATCH format"
+            exit 1
+          fi
+      - name: Verify package.json version matches tag
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match tag (${GITHUB_REF_NAME})"
+            exit 1
+          fi
+      - name: Install and test
+        run: npm ci && npx ng test --watch=false
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image
+        run: docker build -t ghcr.io/golivelabs/golive-frontend:${GITHUB_REF_NAME} .
+      - name: Push image
+        run: docker push ghcr.io/golivelabs/golive-frontend:${GITHUB_REF_NAME}

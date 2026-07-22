@@ -120,3 +120,26 @@ func TestList_Pagination(t *testing.T) {
 		t.Fatalf("unexpected page: %+v", page)
 	}
 }
+
+// UT-072
+func TestCreate_PersistsIngestURLTemplate(t *testing.T) {
+	svc := newService(t)
+	ctx := context.Background()
+
+	const template = "rtmp://a.rtmp.youtube.com/live2"
+	p, err := svc.Create(ctx, streamplatform.CreateRequest{
+		Slug:              "youtube",
+		DisplayName:       "YouTube",
+		IngestURLTemplate: template,
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	got, err := svc.GetByID(ctx, p.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.IngestURLTemplate != template {
+		t.Fatalf("expected IngestURLTemplate %q, got %q", template, got.IngestURLTemplate)
+	}
+}

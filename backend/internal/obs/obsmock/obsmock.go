@@ -25,6 +25,16 @@ type Mock struct {
 	ReconnectCalls int
 	ReconnectErr   error
 
+	// Streaming tracks whether StartProgramStream succeeded without a
+	// subsequent StopProgramStream.
+	Streaming bool
+	// LastStreamURL is the rtmpURL last passed to StartProgramStream.
+	LastStreamURL string
+	// StartProgramStreamCalls counts StartProgramStream invocations.
+	StartProgramStreamCalls int
+	// StopProgramStreamCalls counts StopProgramStream invocations.
+	StopProgramStreamCalls int
+
 	// CreatePositionInputErr, when set, is returned by the next
 	// CreatePositionInput call instead of the normal success path.
 	CreatePositionInputErr error
@@ -34,6 +44,12 @@ type Mock struct {
 	// SetInputAudioMutedErr, when set, is returned by every
 	// SetInputAudioMuted call instead of the normal success path.
 	SetInputAudioMutedErr error
+	// StartProgramStreamErr, when set, is returned by StartProgramStream
+	// instead of the normal success path.
+	StartProgramStreamErr error
+	// StopProgramStreamErr, when set, is returned by StopProgramStream
+	// instead of the normal success path.
+	StopProgramStreamErr error
 }
 
 // New creates a Mock with an initially connected state.
@@ -124,4 +140,39 @@ func (m *Mock) Reconnect() error {
 		m.Connected = true
 	}
 	return m.ReconnectErr
+}
+
+func (m *Mock) StartProgramStream(rtmpURL string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.StartProgramStreamCalls++
+	m.LastStreamURL = rtmpURL
+	if m.StartProgramStreamErr != nil {
+		return m.StartProgramStreamErr
+	}
+	if !m.Connected {
+		return fmt.Errorf("obs is not connected")
+	}
+	m.Streaming = true
+	return nil
+}
+
+func (m *Mock) StopProgramStream() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.StopProgramStreamCalls++
+	if m.StopProgramStreamErr != nil {
+		return m.StopProgramStreamErr
+	}
+	if !m.Connected {
+		return fmt.Errorf("obs is not connected")
+	}
+	m.Streaming = false
+	return nil
+}
+
+func (m *Mock) IsStreaming() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.Streaming
 }

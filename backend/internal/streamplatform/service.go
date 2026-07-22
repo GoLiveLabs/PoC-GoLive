@@ -31,6 +31,7 @@ func (s *Service) Create(ctx context.Context, req CreateRequest) (*Platform, err
 	if err != nil {
 		return nil, err
 	}
+	p.IngestURLTemplate = strings.TrimSpace(req.IngestURLTemplate)
 
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var count int64
@@ -107,6 +108,9 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, req UpdateRequest) (
 				return ErrInvalidName
 			}
 			p.DisplayName = name
+		}
+		if req.IngestURLTemplate != nil {
+			p.IngestURLTemplate = strings.TrimSpace(*req.IngestURLTemplate)
 		}
 
 		if err := tx.Save(&p).Error; err != nil {

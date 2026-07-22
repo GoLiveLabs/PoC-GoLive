@@ -24,7 +24,12 @@ type fakeOrchestrator struct {
 	// the resulting Position (defaults to the zero value if unset).
 	resultPosition orchestrator.Position
 
-	// err, when set, is returned by every position-mutating method call
+	scenes       []orchestrator.Scene
+	resultScene  orchestrator.Scene
+	liveState    orchestrator.LiveState
+	resultLive   orchestrator.LiveState
+
+	// err, when set, is returned by every mutating method call
 	// instead of the normal success path, letting tests inject any failure
 	// shape from the error-to-status mapping table.
 	err error
@@ -75,9 +80,59 @@ func (f *fakeOrchestrator) SetAudioPosition(positionID string) (orchestrator.Pos
 	return f.resultPosition, nil
 }
 
+func (f *fakeOrchestrator) Scenes() []orchestrator.Scene { return f.scenes }
+
+func (f *fakeOrchestrator) CreateScene(name string, positionIDs []string) (orchestrator.Scene, error) {
+	if f.err != nil {
+		return orchestrator.Scene{}, f.err
+	}
+	return f.resultScene, nil
+}
+
+func (f *fakeOrchestrator) RenameScene(id, newName string) (orchestrator.Scene, error) {
+	if f.err != nil {
+		return orchestrator.Scene{}, f.err
+	}
+	return f.resultScene, nil
+}
+
+func (f *fakeOrchestrator) UpdateScenePositions(id string, positionIDs []string) (orchestrator.Scene, error) {
+	if f.err != nil {
+		return orchestrator.Scene{}, f.err
+	}
+	return f.resultScene, nil
+}
+
+func (f *fakeOrchestrator) DeleteScene(id string) error {
+	return f.err
+}
+
+func (f *fakeOrchestrator) LiveState() orchestrator.LiveState { return f.liveState }
+
+func (f *fakeOrchestrator) SetPreviewCamera(cameraID string) (orchestrator.LiveState, error) {
+	if f.err != nil {
+		return orchestrator.LiveState{}, f.err
+	}
+	return f.resultLive, nil
+}
+
+func (f *fakeOrchestrator) SetPreviewScene(sceneID string) (orchestrator.LiveState, error) {
+	if f.err != nil {
+		return orchestrator.LiveState{}, f.err
+	}
+	return f.resultLive, nil
+}
+
+func (f *fakeOrchestrator) Cut(ctx context.Context) (orchestrator.LiveState, error) {
+	if f.err != nil {
+		return orchestrator.LiveState{}, f.err
+	}
+	return f.resultLive, nil
+}
+
 func newTestServer(orch *fakeOrchestrator) http.Handler {
 	hub := events.NewHub()
-	return NewServer(orch, hub, testToken, nil, nil, nil, nil).Handler()
+	return NewServer(orch, hub, testToken, nil, nil, nil, nil, nil).Handler()
 }
 
 func TestHealth_NoTokenRequired(t *testing.T) {

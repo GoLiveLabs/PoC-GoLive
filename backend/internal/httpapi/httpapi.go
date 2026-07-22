@@ -26,6 +26,17 @@ type Orchestrator interface {
 	AssignCamera(positionID, cameraID string) (orchestrator.Position, error)
 	UnassignPosition(positionID string) (orchestrator.Position, error)
 	SetAudioPosition(positionID string) (orchestrator.Position, error)
+
+	Scenes() []orchestrator.Scene
+	CreateScene(name string, positionIDs []string) (orchestrator.Scene, error)
+	RenameScene(id, newName string) (orchestrator.Scene, error)
+	UpdateScenePositions(id string, positionIDs []string) (orchestrator.Scene, error)
+	DeleteScene(id string) error
+
+	LiveState() orchestrator.LiveState
+	SetPreviewCamera(cameraID string) (orchestrator.LiveState, error)
+	SetPreviewScene(sceneID string) (orchestrator.LiveState, error)
+	Cut(ctx context.Context) (orchestrator.LiveState, error)
 }
 
 // Server wires the orchestrator and the client/ingest/streaming-platform/
@@ -40,6 +51,7 @@ type Server struct {
 	ingests   IngestService
 	platforms StreamPlatformService
 	liveIDs   LiveIDService
+	broadcast BroadcastService
 
 	connsMu sync.Mutex
 	conns   map[*websocket.Conn]struct{}
@@ -54,6 +66,7 @@ func NewServer(
 	ingests IngestService,
 	platforms StreamPlatformService,
 	liveIDs LiveIDService,
+	broadcastSvc BroadcastService,
 ) *Server {
 	s := &Server{
 		orch:      orch,
@@ -63,6 +76,7 @@ func NewServer(
 		ingests:   ingests,
 		platforms: platforms,
 		liveIDs:   liveIDs,
+		broadcast: broadcastSvc,
 		conns:     make(map[*websocket.Conn]struct{}),
 	}
 	s.routes()
@@ -140,6 +154,21 @@ mux.HandleFunc("POST /api/v1/clients", s.handleCreateClient)
 	mux.HandleFunc("POST /api/v1/positions/{id}/camera", s.handleAssignCamera)
 	mux.HandleFunc("DELETE /api/v1/positions/{id}/camera", s.handleUnassignPosition)
 	mux.HandleFunc("POST /api/v1/positions/{id}/audio", s.handleSetAudioPosition)
+
+	mux.HandleFunc("GET /api/v1/scenes", s.handleListScenes)
+	mux.HandleFunc("POST /api/v1/scenes", s.handleCreateScene)
+	mux.HandleFunc("PATCH /api/v1/scenes/{id}", s.handlePatchScene)
+	mux.HandleFunc("DELETE /api/v1/scenes/{id}", s.handleDeleteScene)
+
+	mux.HandleFunc("GET /api/v1/live", s.handleGetLive)
+	mux.HandleFunc("POST /api/v1/live/preview", s.handleSetPreview)
+	mux.HandleFunc("POST /api/v1/live/cut", s.handleCut)
+
+	mux.HandleFunc("GET /api/v1/broadcast", s.handleGetBroadcast)
+	mux.HandleFunc("POST /api/v1/broadcast/client", s.handleSetBroadcastClient)
+	mux.HandleFunc("POST /api/v1/broadcast/start", s.handleBroadcastStart)
+	mux.HandleFunc("POST /api/v1/broadcast/stop", s.handleBroadcastStop)
+	mux.HandleFunc("POST /api/v1/broadcast/destinations/{liveId}/restart", s.handleBroadcastRestart)
 
 	s.mux = mux
 }
@@ -290,6 +319,8 @@ func writePositionError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadGateway, "OBS está inacessível no momento")
 	case isErr(err, orchestrator.ErrPositionOBSInputMissing):
 		writeError(w, http.StatusBadGateway, "input do OBS da posição não encontrado")
+	case isErr(err, orchestrator.ErrReservedPosition):
+		writeError(w, http.StatusUnprocessableEntity, "posição reservada")
 	default:
 		writeError(w, http.StatusInternalServerError, "erro interno")
 	}

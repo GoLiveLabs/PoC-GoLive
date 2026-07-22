@@ -1,5 +1,13 @@
 # === Documentação (Markdown) ===
 *.md
+# Pre-staged for the split repos: these must be tracked so they survive
+# `git filter-repo --subdirectory-filter` and land at the new repo root.
+!backend/README.md
+!backend/docs/
+!backend/docs/*.md
+!frontend/README.md
+!frontend/docs/
+!frontend/docs/*.md
 
 # === Ferramentas de IA / assistentes de código ===
 .claude/
